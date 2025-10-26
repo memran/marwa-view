@@ -211,6 +211,9 @@ final class View implements ViewInterface
     private function normalizeTemplateName(string $name): string
     {
         $trimmed = ltrim($name, '/');
+        if (str_contains($trimmed, '..')) {
+            throw new ViewException("Invalid template path '{$name}'");
+        }
         return $trimmed . '.twig';
     }
 

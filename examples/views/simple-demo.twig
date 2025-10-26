@@ -63,6 +63,10 @@
           note: 'Rendered with view() helper inside simple-demo.twig'
       })|raw }}
     </section>
+    
+    <h2>Macro Test</h2>
+    {% import "macros/form.twig" as forms %}
+    <p>{{ forms.input('username,"Username') }}</p>
 
     <footer>
       Powered by {{ appName }} • {{ "now"|date("Y") }}
