@@ -20,7 +20,11 @@
       <h1>{{ title }}</h1>
       <p>Welcome, <strong>{{ user.name|default('Guest') }}</strong>!</p>
     </header>
-
+    <section>
+      <h1>Translate Feature:</h1>
+      <h1>{{ t('welcome.title', {':name': user.name}) }}</h1>
+      <a href="#">{{ t('logout') }}</a>
+    </section>
     <section>
       <h2>Client List</h2>
       <table>

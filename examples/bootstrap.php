@@ -10,7 +10,13 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use Marwa\View\View;
 use Marwa\View\ViewConfig;
 use Marwa\View\Extension\{AssetExtension, TextExtension, DateExtension, UrlExtension};
+use Marwa\View\Extension\TranslateExtension;
+use Marwa\View\Translate\ArrayTranslator;
 
+$translator = new ArrayTranslator(
+    defaultLocale: 'en',
+    langPath: __DIR__ . '/lang'
+);
 
 // -----------------------------------------------------------------------------
 // Configure View
@@ -32,7 +38,8 @@ $view = new View($config, [
     new AssetExtension('/static', '1.2.3'),
     new TextExtension(),
     new DateExtension(),
-    new UrlExtension('https://example.com')
+    new UrlExtension('https://example.com'),
+    new TranslateExtension($translator)
 ]);
 
 // -----------------------------------------------------------------------------
@@ -40,6 +47,8 @@ $view = new View($config, [
 // -----------------------------------------------------------------------------
 $view->share('appName', 'EnetFlow Billing Suite');
 $view->share('csrf', bin2hex(random_bytes(16)));
+// Share locale for convenience
+$view->share('locale', $translator->getLocale());
 
 // You can also share "auth" or current tenant/org, etc.
 $view->share('auth', [

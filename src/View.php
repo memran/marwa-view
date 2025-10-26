@@ -60,7 +60,10 @@ final class View implements ViewInterface
         // PSR-16 fragment cache
         $this->fragmentCache = $config->getFragmentCache() ?? new NullCache();
     }
-
+    public function addExtension($extension)
+    {
+        $this->twig->addExtension($extension);
+    }
     /**
      * Render template to string with merged shared + local data.
      *

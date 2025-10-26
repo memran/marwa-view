@@ -12,7 +12,8 @@
   "require": {
     "php": "^8.1",
     "twig/twig": "^3.21",
-    "psr/simple-cache": "^3.0"
+    "psr/simple-cache": "^3.0",
+    "symfony/translation": "^7.3"
   },
   "autoload": {
     "psr-4": {
