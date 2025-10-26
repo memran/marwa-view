@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>{{ title }} - {{ appName }}</title>
+    <style>
+      body { font-family: system-ui, sans-serif; background: #f9fafb; color: #1f2937; margin: 0; padding: 2rem; }
+      header { border-bottom: 1px solid #e5e7eb; margin-bottom: 1.5rem; padding-bottom: 0.5rem; }
+      h1 { color: #2563eb; font-size: 1.75rem; }
+      table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+      th, td { padding: .5rem .75rem; border-bottom: 1px solid #e5e7eb; text-align: left; }
+      th { background: #f3f4f6; font-weight: 600; }
+      footer { text-align: center; font-size: 0.8rem; color: #6b7280; margin-top: 2rem; }
+      .highlight { background: #e0f2fe; color: #0369a1; padding: 0.25rem 0.5rem; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+
+    <header>
+      <h1>{{ title }}</h1>
+      <p>Welcome, <strong>{{ user.name|default('Guest') }}</strong>!</p>
+    </header>
+
+    <section>
+      <h2>Client List</h2>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Name</th><th>Status</th><th>Revenue</th></tr>
+        </thead>
+        <tbody>
+          {% for client in clients %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td>{{ client.name }}</td>
+              <td>
+                {% if client.active %}
+                  <span class="highlight">Active</span>
+                {% else %}
+                  Inactive
+                {% endif %}
+              </td>
+              <td>{{ client.revenue_monthly|number_format(2, '.', ',') }} ৳</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4">No clients found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Fragment Example (Cached Sidebar)</h2>
+      {{ fragment('simple_sidebar', 120, {
+          template: 'partials/sidebar',
+          data: { user: user }
+      })|raw }}
+    </section>
+
+    <section>
+      <h2>Sub-View Example</h2>
+      {{ view('components/card-info', {
+          title: 'Quick Info',
+          note: 'Rendered with view() helper inside simple-demo.twig'
+      })|raw }}
+    </section>
+
+    <footer>
+      Powered by {{ appName }} • {{ "now"|date("Y") }}
+    </footer>
+
+  </body>
+</html>

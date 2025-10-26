@@ -1,0 +1,12 @@
+<!doctype html>
+<html class="h-full bg-gray-100">
+  <head>
+    <meta charset="utf-8"/>
+    <title>{% block title %}Untitled{% endblock %}</title>
+    <meta name="csrf-token" content="{{ csrf }}">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+  </head>
+  <body class="min-h-screen text-slate-800">
+    {% block body %}{% endblock %}
+  </body>
+</html>

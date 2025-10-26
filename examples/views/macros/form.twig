@@ -1,0 +1,24 @@
+{% macro input(name, label, value) %}
+  <label class="block text-xs text-slate-600 font-semibold mb-1" for="{{ name }}">
+    {{ label }}
+  </label>
+  <input
+    class="w-full border rounded px-3 py-2 text-sm text-slate-800 bg-white outline-none focus:ring focus:ring-indigo-300"
+    type="text"
+    id="{{ name }}"
+    name="{{ name }}"
+    value="{{ value|e }}"
+  />
+{% endmacro %}
+
+{% macro password(name, label) %}
+  <label class="block text-xs text-slate-600 font-semibold mb-1" for="{{ name }}">
+    {{ label }}
+  </label>
+  <input
+    class="w-full border rounded px-3 py-2 text-sm text-slate-800 bg-white outline-none focus:ring focus:ring-indigo-300"
+    type="password"
+    id="{{ name }}"
+    name="{{ name }}"
+  />
+{% endmacro %}
