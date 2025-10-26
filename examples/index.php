@@ -16,7 +16,7 @@ $view = new View($config);
 // share globals
 $view->share('appName', 'EnetFlow Billing');
 $view->share('csrf', 'abc123token');
-echo $view->render('welcome', [
+echo $view->render('myhome', [
     'title' => 'Welcome Home',
     'user' => [
         'name' => 'Mohammad Emran',
