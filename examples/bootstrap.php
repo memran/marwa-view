@@ -39,7 +39,7 @@ $view = new View($config, [
     new TextExtension(),
     new DateExtension(),
     new UrlExtension('https://example.com'),
-    new TranslateExtension($translator)
+    new TranslateExtension($translator),
 ]);
 
 // -----------------------------------------------------------------------------
