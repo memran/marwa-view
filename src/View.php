@@ -6,6 +6,8 @@ namespace Marwa\View;
 
 use Marwa\View\Cache\NullCache;
 use Marwa\View\Exception\ViewException;
+use Marwa\View\Support\Path;
+use Marwa\View\Theme\ThemeBuilder;
 use Psr\SimpleCache\CacheInterface;
 use Twig\Environment;
 use Twig\Extension\AbstractExtension;
@@ -15,6 +17,11 @@ use Twig\TwigFunction;
 /**
  * View is a thin-but-powerful façade around Twig.
  * It focuses on DX, hides Twig, and adds PSR-16 fragment caching.
+ *
+ * Now supports optional ThemeBuilder for multi-tenant / skinning.
+ * - If ThemeBuilder is provided, templates are resolved via ThemeBuilder
+ *   and rendered from source (createTemplate()).
+ * - Otherwise it falls back to classic Twig FilesystemLoader.
  */
 final class View implements ViewInterface
 {
@@ -25,15 +32,30 @@ final class View implements ViewInterface
 
     private Environment $twig;
     private CacheInterface $fragmentCache;
+    private ViewConfig $config;
 
     /**
-     * @param ViewConfig $config
-     * @param list<AbstractExtension> $extensions  (optional custom filters/functions/globals providers)
+     * @var ThemeBuilder|null
+     */
+    private ?ThemeBuilder $themeBuilder;
+
+    /**
+     * @param ViewConfig               $config
+     * @param list<AbstractExtension>  $extensions  optional custom filters/functions/globals
+     * @param ThemeBuilder|null        $themeBuilder optional theme manager; if null we use default views path
      */
     public function __construct(
-        private ViewConfig $config,
-        array $extensions = []
+        ViewConfig $config,
+        array $extensions = [],
+        ?ThemeBuilder $themeBuilder = null
     ) {
+        $this->config        = $config;
+        $this->themeBuilder  = $themeBuilder;
+
+        // If no ThemeBuilder: standard Twig loader bound to a single views path.
+        // If ThemeBuilder exists: we still need an Environment, but we won't trust
+        // the loader to locate themed templates automatically because theme can
+        // change per request. We'll render from source manually in render().
         $loader = new FilesystemLoader($config->getViewsPath());
 
         $this->twig = new Environment(
@@ -46,24 +68,29 @@ final class View implements ViewInterface
             ]
         );
 
-        // register core DX helpers
+        // register core DX helpers (fragment(), view(), theme_asset() if available)
         $this->twig->addExtension($this->buildCoreExtension());
 
-        // register user-provided extensions
+        // register caller-provided extensions
         foreach ($extensions as $ext) {
             $this->twig->addExtension($ext);
         }
 
-        // share() globals should always be visible
+        // sync shared() globals
         $this->syncSharedGlobals();
 
         // PSR-16 fragment cache
         $this->fragmentCache = $config->getFragmentCache() ?? new NullCache();
     }
-    public function addExtension($extension)
+
+    /**
+     * Dynamically add Twig extension after construction
+     */
+    public function addExtension(AbstractExtension $extension): void
     {
         $this->twig->addExtension($extension);
     }
+
     /**
      * Render template to string with merged shared + local data.
      *
@@ -72,12 +99,40 @@ final class View implements ViewInterface
      */
     public function render(string $template, array $data = []): string
     {
-        $tplFile = $this->normalizeTemplateName($template);
+        $tplLogical = $this->normalizeTemplateName($template);
 
         try {
             $merged = array_merge($this->sharedData, $data);
 
-            return $this->twig->render($tplFile, $merged);
+            // THEME MODE:
+            // If ThemeBuilder is available, we resolve file path via theme
+            // inheritance and feed Twig using createTemplate() so we don't
+            // have to mutate Twig's loader paths per request.
+            if ($this->themeBuilder !== null) {
+                $absoluteFile = $this->themeBuilder->template($tplLogical);
+
+                $source = file_get_contents($absoluteFile);
+                if ($source === false) {
+                    throw new ViewException("Failed to read view file '{$absoluteFile}'");
+                }
+
+                $compiled = $this->twig->createTemplate($source);
+
+                // inject theme_asset() callable into render scope
+                $merged['theme_asset'] = function (string $assetPath): string {
+                    if ($this->themeBuilder === null) {
+                        // no theme builder -> no themed asset URL
+                        return $assetPath;
+                    }
+                    return $this->themeBuilder->asset($assetPath);
+                };
+
+                return $compiled->render($merged);
+            }
+
+            // NON-THEME MODE:
+            // Fall back to regular Twig::render() which uses FilesystemLoader root
+            return $this->twig->render($tplLogical, $merged);
         } catch (\Throwable $e) {
             throw new ViewException(
                 "Failed to render view '{$template}': " . $e->getMessage(),
@@ -150,12 +205,15 @@ final class View implements ViewInterface
     }
 
     /**
-     * INTERNAL: build our core DX helpers as a Twig Extension
-     * without exposing Twig outside of this class.
+     * INTERNAL: core DX helpers extension.
+     *
+     * Registers:
+     *  - fragment(key, ttl, producer)
+     *  - view(tpl, data)
+     *  - theme_asset(path)   [only meaningful if ThemeBuilder exists]
      */
     private function buildCoreExtension(): AbstractExtension
     {
-        // We create an anonymous extension to register helper functions
         return new class($this) extends AbstractExtension {
             public function __construct(private View $view) {}
 
@@ -164,36 +222,55 @@ final class View implements ViewInterface
              */
             public function getFunctions(): array
             {
-                return [
-                    // fragment('key', ttl, fn() => '<html>')
-                    // fragment('sidebar', 300, {template:'partials/sidebar', data:{...}})
-                    new TwigFunction(
-                        'fragment',
-                        /**
-                         * @param string $key
-                         * @param int $ttl
-                         * @param callable|array $producer
-                         */
-                        function (string $key, int $ttl, callable|array $producer): string {
-                            return $this->view->fragment($key, $ttl, $producer);
-                        },
-                        ['is_safe' => ['html']]
-                    ),
+                $fns = [];
 
-                    // view() lets you render a nested template from inside a template
-                    // {{ view('components/button', {text: 'OK'})|raw }}
-                    new TwigFunction(
-                        'view',
-                        /**
-                         * @param string $tpl
-                         * @param array<string,mixed> $data
-                         */
-                        function (string $tpl, array $data = []): string {
-                            return $this->view->render($tpl, $data);
-                        },
-                        ['is_safe' => ['html']]
-                    ),
-                ];
+                // fragment('key', ttl, fn() => '<html>')
+                // fragment('sidebar', 300, {template:'partials/sidebar', data:{...}})
+                $fns[] = new TwigFunction(
+                    'fragment',
+                    /**
+                     * @param string $key
+                     * @param int $ttl
+                     * @param callable|array $producer
+                     */
+                    function (string $key, int $ttl, callable|array $producer): string {
+                        return $this->view->fragment($key, $ttl, $producer);
+                    },
+                    ['is_safe' => ['html']]
+                );
+
+                // Render nested partial:
+                // {{ view('components/button', {text: 'OK'})|raw }}
+                $fns[] = new TwigFunction(
+                    'view',
+                    /**
+                     * @param string $tpl
+                     * @param array<string,mixed> $data
+                     */
+                    function (string $tpl, array $data = []): string {
+                        return $this->view->render($tpl, $data);
+                    },
+                    ['is_safe' => ['html']]
+                );
+
+                // theme_asset('css/app.css')
+                // will return themed asset URL if ThemeBuilder exists,
+                // otherwise we just return the path untouched.
+                $fns[] = new TwigFunction(
+                    'theme_asset',
+                    /**
+                     * @param string $assetPath
+                     */
+                    function (string $assetPath): string {
+                        $builder = $this->view->getThemeBuilder();
+                        if ($builder === null) {
+                            return $assetPath;
+                        }
+                        return $builder->asset($assetPath);
+                    }
+                );
+
+                return $fns;
             }
         };
     }
@@ -206,6 +283,12 @@ final class View implements ViewInterface
         foreach ($this->sharedData as $key => $value) {
             $this->twig->addGlobal($key, $value);
         }
+
+        // Also expose "theme" info globally if ThemeBuilder exists.
+        if ($this->themeBuilder !== null) {
+            $this->twig->addGlobal('_theme_name', $this->themeBuilder->current());
+            $this->twig->addGlobal('_theme_chain', $this->themeBuilder->chain());
+        }
     }
 
     /**
@@ -213,7 +296,8 @@ final class View implements ViewInterface
      */
     private function normalizeTemplateName(string $name): string
     {
-        $trimmed = ltrim($name, '/');
+        $tplPath = Path::normalize($name);
+        $trimmed = ltrim($tplPath, '/');
         if (str_contains($trimmed, '..')) {
             throw new ViewException("Invalid template path '{$name}'");
         }
@@ -272,5 +356,14 @@ final class View implements ViewInterface
                 @unlink($path);
             }
         }
+    }
+
+    /**
+     * Expose ThemeBuilder for internal helpers (theme_asset(), etc.).
+     * Returns null if View was constructed without a ThemeBuilder.
+     */
+    public function getThemeBuilder(): ?ThemeBuilder
+    {
+        return $this->themeBuilder;
     }
 }

@@ -1,0 +1,11 @@
+/* dark theme overrides */
+body {
+  background-color: #0f172a; /* slate-900 */
+  color: #e2e8f0; /* slate-200 */
+}
+
+.site-header {
+  background-color: #1e293b; /* slate-800 */
+  border-color: #334155; /* slate-700 */
+  color: #e2e8f0;
+}

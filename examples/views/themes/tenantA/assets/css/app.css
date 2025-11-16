@@ -1,0 +1,12 @@
+/* tenantA brand overrides (on top of dark parent theme idea) */
+button,
+.bg-indigo-600 {
+  background-color: #16a34a !important; /* green-600 */
+}
+.bg-indigo-600:hover {
+  background-color: #15803d !important; /* green-700 */
+}
+.focus\:ring-indigo-500 {
+  /* override focus ring if you're using tailwind's class names in layout.twig */
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.5) !important;
+}
