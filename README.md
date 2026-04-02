@@ -1,5 +1,7 @@
 # Marwa\View
 
+[![Packagist Version](https://img.shields.io/packagist/v/memran/marwa-view.svg)](https://packagist.org/packages/memran/marwa-view)
+[![Packagist Downloads](https://img.shields.io/packagist/dt/memran/marwa-view.svg)](https://packagist.org/packages/memran/marwa-view)
 [![CI](https://github.com/memran/marwa-view/actions/workflows/ci.yml/badge.svg)](https://github.com/memran/marwa-view/actions/workflows/ci.yml)
 [![PHP 8.2+](https://img.shields.io/badge/PHP-8.2%2B-777bb4.svg)](https://www.php.net/)
 [![PHPStan 2.x](https://img.shields.io/badge/PHPStan-2.x-31C652.svg)](https://phpstan.org/)
