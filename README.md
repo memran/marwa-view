@@ -216,6 +216,53 @@ $view->display('pages/about');
 {{ view('components/card', { title: 'Status', value: 'Healthy' })|raw }}
 ```
 
+### Translation
+
+Create language files:
+
+```php
+<?php
+
+return [
+    'welcome' => [
+        'title' => 'Welcome back, :name!',
+    ],
+    'cart' => [
+        'items' => [
+            'one' => ':count item',
+            'other' => ':count items',
+        ],
+    ],
+];
+```
+
+Register the translator:
+
+```php
+use Marwa\View\Extension\TranslateExtension;
+use Marwa\View\Translate\ArrayTranslator;
+
+$translator = new ArrayTranslator('en', __DIR__ . '/lang');
+
+$view = new View($config, [
+    new TranslateExtension($translator),
+]);
+```
+
+Use it in Twig:
+
+```twig
+<h1>{{ t('welcome.title', { name: auth.name }) }}</h1>
+<p>{{ tc('cart.items', cartCount) }}</p>
+```
+
+Rendered output:
+
+```html
+<h1>Welcome back, Avery!</h1>
+<p>2 items</p>
+```
+
 ### Namespaced views
 
 Register a module namespace:

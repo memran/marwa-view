@@ -78,6 +78,55 @@ $view->addExtension(new IconExtension([
 - `html_attrs()`
 - `ui()`
 
+### Translation
+
+`TranslateExtension` exposes translation helpers backed by `ArrayTranslator` or another translator implementation.
+
+Language file example:
+
+```php
+<?php
+
+return [
+    'welcome' => [
+        'title' => 'Welcome back, :name!',
+    ],
+    'cart' => [
+        'items' => [
+            'one' => ':count item',
+            'other' => ':count items',
+        ],
+    ],
+];
+```
+
+Registration:
+
+```php
+use Marwa\View\Extension\TranslateExtension;
+use Marwa\View\Translate\ArrayTranslator;
+
+$translator = new ArrayTranslator('en', __DIR__ . '/../lang');
+
+$view = new View($config, [
+    new TranslateExtension($translator),
+]);
+```
+
+Twig usage:
+
+```twig
+<h1>{{ t('welcome.title', { name: auth.name }) }}</h1>
+<p>{{ tc('cart.items', cartCount) }}</p>
+```
+
+Available helpers:
+
+- `t()`
+- `trans()`
+- `tc()`
+- `transChoice()`
+
 ### Alpine Bridge
 
 `AlpineExtension` exposes a `ui()` helper for Alpine.js directive attributes.
