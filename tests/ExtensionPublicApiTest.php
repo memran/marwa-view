@@ -13,8 +13,6 @@ use Marwa\View\Tests\Support\CreatesTemporaryFiles;
 use Marwa\View\Translate\ArrayTranslator;
 use PHPUnit\Framework\TestCase;
 use Twig\Extension\AbstractExtension;
-use Twig\TwigFilter;
-use Twig\TwigFunction;
 
 final class ExtensionPublicApiTest extends TestCase
 {
