@@ -49,7 +49,9 @@ composer install
 - [API Reference](docs/api.md)
 - [Module Views](docs/modules.md)
 - [Extensions](docs/extensions.md)
+- [Create an Extension](docs/create-extension.md)
 - [Themes](docs/themes.md)
+- [Create a Theme](docs/create-theme.md)
 - [Examples](docs/examples.md)
 - [Development](docs/development.md)
 

@@ -127,3 +127,7 @@ This lets a themed module template extend the active theme layout:
 - `examples/theme/theme.php`
 - `examples/theme/switch-theme.php`
 - `examples/theme/docs.php`
+
+## Full Tutorial
+
+For a complete end-to-end theme guide, see [Create a Theme](./create-theme.md).

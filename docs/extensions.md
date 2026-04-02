@@ -170,3 +170,7 @@ Common methods:
 - Keep extensions view-layer only.
 - Avoid request, session, auth, and routing concerns here.
 - Prefer explicit registration over magic discovery.
+
+## Full Tutorial
+
+For a complete step-by-step guide, see [Create an Extension](./create-extension.md).
