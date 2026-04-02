@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Marwa\View\Translate;
 
-use Symfony\Component\Translation\Translator;
 use Symfony\Component\Translation\Loader\ArrayLoader;
+use Symfony\Component\Translation\Translator;
 
 /**
  * ArrayTranslator
@@ -34,8 +34,8 @@ final class ArrayTranslator implements TranslatorInterface
     private array $catalog = [];
 
     public function __construct(
-        private string $defaultLocale,
-        private string $langPath
+        string $defaultLocale,
+        private string $langPath,
     ) {
         if (!is_dir($langPath)) {
             throw new \InvalidArgumentException("Language path '{$langPath}' not found.");
@@ -80,7 +80,7 @@ final class ArrayTranslator implements TranslatorInterface
         }
 
         // pick correct form
-        $pattern = $this->selectPluralForm($forms, $count, $loc);
+        $pattern = $this->selectPluralForm($forms, $count);
 
         // inject :count automatically
         $replacements = $this->injectCount($replacements, $count);
@@ -90,6 +90,10 @@ final class ArrayTranslator implements TranslatorInterface
 
     public function setLocale(string $locale): void
     {
+        if (!isset($this->catalog[$locale])) {
+            throw new \InvalidArgumentException("Locale '{$locale}' is not available.");
+        }
+
         $this->translator->setLocale($locale);
     }
 
@@ -147,7 +151,8 @@ final class ArrayTranslator implements TranslatorInterface
     private function applyReplacements(string $message, array $replacements): string
     {
         foreach ($replacements as $search => $value) {
-            $message = str_replace($search, (string) $value, $message);
+            $placeholder = str_starts_with((string) $search, ':') ? (string) $search : ':' . $search;
+            $message = str_replace($placeholder, (string) $value, $message);
         }
         return $message;
     }
@@ -169,9 +174,9 @@ final class ArrayTranslator implements TranslatorInterface
     /**
      * Selects singular/plural message form based on count and locale.
      *
-     * @param array<string,string> $forms e.g. ['one' => '1 item', 'other' => ':count items']
+     * @param array<string, mixed> $forms e.g. ['one' => '1 item', 'other' => ':count items']
      */
-    private function selectPluralForm(array $forms, int $count, string $locale): string
+    private function selectPluralForm(array $forms, int $count): string
     {
         // Basic rule:
         // - if 1 => "one"
@@ -181,17 +186,20 @@ final class ArrayTranslator implements TranslatorInterface
 
         $key = ($count === 1) ? 'one' : 'other';
 
-        if (isset($forms[$key]) && is_string($forms[$key])) {
-            return $forms[$key];
+        $preferred = $forms[$key] ?? null;
+        if (is_string($preferred)) {
+            return $preferred;
         }
 
         // fallback chain
-        if (isset($forms['other']) && is_string($forms['other'])) {
-            return $forms['other'];
+        $other = $forms['other'] ?? null;
+        if (is_string($other)) {
+            return $other;
         }
 
-        if (isset($forms['one']) && is_string($forms['one'])) {
-            return $forms['one'];
+        $one = $forms['one'] ?? null;
+        if (is_string($one)) {
+            return $one;
         }
 
         // ultimate fallback: just return first string we find

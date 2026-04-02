@@ -25,12 +25,14 @@ final class ThemeResolver
      *   2. if not found and tenantA extends "default", check /themes/default/profile.twig
      *
      * @throws TemplateNotFoundException
+     * @throws \InvalidArgumentException
      */
     public function resolveTemplate(
         ThemeRegistry $registry,
         string $themeName,
         string $relativeTemplatePath
     ): string {
+        $relativeTemplatePath = $this->normalizeRelativePath($relativeTemplatePath);
         $visited = [];
 
         $current = $themeName;
@@ -43,9 +45,7 @@ final class ThemeResolver
 
             $theme = $registry->get($current);
 
-            $candidate = $theme->path()
-                . DIRECTORY_SEPARATOR
-                . ltrim($relativeTemplatePath, DIRECTORY_SEPARATOR);
+            $candidate = Path::join($theme->path(), $relativeTemplatePath);
 
             if (is_file($candidate)) {
                 return $candidate;
@@ -64,11 +64,18 @@ final class ThemeResolver
      * We DO NOT check filesystem existence here (CDN, etc.).
      *
      * Example output: /themes/tenantA/css/app.css
+     *
+     * @throws \InvalidArgumentException
      */
     public function buildAssetUrl(ThemeRegistry $registry, string $themeName, string $relativeAssetPath): string
     {
         $theme = $registry->get($themeName);
-        return Path::toUrl($theme->assetBaseUrl() . '/' . ltrim($relativeAssetPath, '/'));
+
+        return Path::toUrl(
+            rtrim($theme->assetBaseUrl(), '/')
+            . '/'
+            . str_replace(DIRECTORY_SEPARATOR, '/', $this->normalizeRelativePath($relativeAssetPath))
+        );
     }
 
 
@@ -77,6 +84,8 @@ final class ThemeResolver
      * Helpful for debugging or for external code that wants to scan all paths.
      *
      * Example: ['tenantA', 'dark', 'default']
+     *
+     * @return list<string>
      */
     public function chain(ThemeRegistry $registry, string $themeName): array
     {
@@ -95,5 +104,32 @@ final class ThemeResolver
         }
 
         return $chain;
+    }
+
+    private function normalizeRelativePath(string $path): string
+    {
+        $path = trim(str_replace('\\', '/', $path));
+        if ($path === '' || str_contains($path, "\0")) {
+            throw new \InvalidArgumentException('Path cannot be empty or contain null bytes');
+        }
+
+        $segments = [];
+        foreach (explode('/', $path) as $segment) {
+            if ($segment === '' || $segment === '.') {
+                continue;
+            }
+
+            if ($segment === '..') {
+                throw new \InvalidArgumentException("Path '{$path}' contains traversal segments");
+            }
+
+            $segments[] = $segment;
+        }
+
+        if ($segments === []) {
+            throw new \InvalidArgumentException("Path '{$path}' is invalid");
+        }
+
+        return implode(DIRECTORY_SEPARATOR, $segments);
     }
 }

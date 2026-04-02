@@ -6,12 +6,13 @@ namespace Marwa\View;
 
 use Marwa\View\Cache\NullCache;
 use Marwa\View\Exception\ViewException;
-use Marwa\View\Support\Path;
 use Marwa\View\Theme\ThemeBuilder;
+use Marwa\View\Theme\ThemeTwigLoader;
 use Psr\SimpleCache\CacheInterface;
 use Twig\Environment;
 use Twig\Extension\AbstractExtension;
 use Twig\Loader\FilesystemLoader;
+use Twig\Loader\LoaderInterface;
 use Twig\TwigFunction;
 
 /**
@@ -19,8 +20,8 @@ use Twig\TwigFunction;
  * It focuses on DX, hides Twig, and adds PSR-16 fragment caching.
  *
  * Now supports optional ThemeBuilder for multi-tenant / skinning.
- * - If ThemeBuilder is provided, templates are resolved via ThemeBuilder
- *   and rendered from source (createTemplate()).
+ * - If ThemeBuilder is provided, template loading is delegated to a custom
+ *   Twig loader so includes/extents remain cacheable and theme-aware.
  * - Otherwise it falls back to classic Twig FilesystemLoader.
  */
 final class View implements ViewInterface
@@ -33,10 +34,6 @@ final class View implements ViewInterface
     private Environment $twig;
     private CacheInterface $fragmentCache;
     private ViewConfig $config;
-
-    /**
-     * @var ThemeBuilder|null
-     */
     private ?ThemeBuilder $themeBuilder;
 
     /**
@@ -52,11 +49,7 @@ final class View implements ViewInterface
         $this->config        = $config;
         $this->themeBuilder  = $themeBuilder;
 
-        // If no ThemeBuilder: standard Twig loader bound to a single views path.
-        // If ThemeBuilder exists: we still need an Environment, but we won't trust
-        // the loader to locate themed templates automatically because theme can
-        // change per request. We'll render from source manually in render().
-        $loader = new FilesystemLoader($config->getViewsPath());
+        $loader = $this->createLoader($config, $themeBuilder);
 
         $this->twig = new Environment(
             $loader,
@@ -75,9 +68,6 @@ final class View implements ViewInterface
         foreach ($extensions as $ext) {
             $this->twig->addExtension($ext);
         }
-
-        // sync shared() globals
-        $this->syncSharedGlobals();
 
         // PSR-16 fragment cache
         $this->fragmentCache = $config->getFragmentCache() ?? new NullCache();
@@ -102,37 +92,7 @@ final class View implements ViewInterface
         $tplLogical = $this->normalizeTemplateName($template);
 
         try {
-            $merged = array_merge($this->sharedData, $data);
-
-            // THEME MODE:
-            // If ThemeBuilder is available, we resolve file path via theme
-            // inheritance and feed Twig using createTemplate() so we don't
-            // have to mutate Twig's loader paths per request.
-            if ($this->themeBuilder !== null) {
-                $absoluteFile = $this->themeBuilder->template($tplLogical);
-
-                $source = file_get_contents($absoluteFile);
-                if ($source === false) {
-                    throw new ViewException("Failed to read view file '{$absoluteFile}'");
-                }
-
-                $compiled = $this->twig->createTemplate($source);
-
-                // inject theme_asset() callable into render scope
-                $merged['theme_asset'] = function (string $assetPath): string {
-                    if ($this->themeBuilder === null) {
-                        // no theme builder -> no themed asset URL
-                        return $assetPath;
-                    }
-                    return $this->themeBuilder->asset($assetPath);
-                };
-
-                return $compiled->render($merged);
-            }
-
-            // NON-THEME MODE:
-            // Fall back to regular Twig::render() which uses FilesystemLoader root
-            return $this->twig->render($tplLogical, $merged);
+            return $this->twig->render($tplLogical, array_merge($this->buildRenderContext(), $data));
         } catch (\Throwable $e) {
             throw new ViewException(
                 "Failed to render view '{$template}': " . $e->getMessage(),
@@ -162,7 +122,6 @@ final class View implements ViewInterface
     public function share(string $name, mixed $value): void
     {
         $this->sharedData[$name] = $value;
-        $this->syncSharedGlobals();
     }
 
     /**
@@ -184,7 +143,7 @@ final class View implements ViewInterface
      *
      * @param string $key    Cache key / logical fragment name
      * @param int $ttl       Cache lifetime in seconds
-     * @param callable():string|array<string,mixed> $producer Either:
+     * @param callable|array<string,mixed> $producer Either:
      *        - a closure returning HTML string
      *        - OR ['template' => 'partial/sidebar', 'data' => [...]]
      */
@@ -192,9 +151,15 @@ final class View implements ViewInterface
     {
         $cacheKey = 'view_fragment:' . $key;
 
-        $cached = $this->fragmentCache->get($cacheKey);
-        if (is_string($cached) && $cached !== '') {
-            return $cached;
+        if ($this->fragmentCache->has($cacheKey)) {
+            $cached = $this->fragmentCache->get($cacheKey);
+            if (is_string($cached)) {
+                return $cached;
+            }
+        }
+
+        if ($ttl < 0) {
+            throw new ViewException('Fragment TTL must be zero or greater.');
         }
 
         $html = $this->produceFragmentHtml($producer);
@@ -202,6 +167,92 @@ final class View implements ViewInterface
         $this->fragmentCache->set($cacheKey, $html, $ttl);
 
         return $html;
+    }
+
+    private function createLoader(ViewConfig $config, ?ThemeBuilder $themeBuilder): LoaderInterface
+    {
+        if ($themeBuilder !== null) {
+            return new ThemeTwigLoader($themeBuilder);
+        }
+
+        return new FilesystemLoader($config->getViewsPath());
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildRenderContext(): array
+    {
+        $context = $this->sharedData;
+
+        if ($this->themeBuilder !== null) {
+            $context['_theme_name'] = $this->themeBuilder->current();
+            $context['_theme_chain'] = $this->themeBuilder->chain();
+        }
+
+        return $context;
+    }
+
+    /**
+     * INTERNAL: normalize logical name "home/index" => "home/index.twig"
+     */
+    private function normalizeTemplateName(string $name): string
+    {
+        $name = trim(str_replace('\\', '/', $name));
+        if ($name === '' || str_contains($name, "\0")) {
+            throw new ViewException('Template name cannot be empty or contain null bytes.');
+        }
+
+        $segments = [];
+        foreach (explode('/', $name) as $segment) {
+            if ($segment === '' || $segment === '.') {
+                continue;
+            }
+
+            if ($segment === '..') {
+                throw new ViewException("Invalid template path '{$name}'");
+            }
+
+            $segments[] = $segment;
+        }
+
+        if ($segments === []) {
+            throw new ViewException("Invalid template path '{$name}'");
+        }
+
+        $normalized = implode('/', $segments);
+        if (!str_ends_with($normalized, '.twig')) {
+            $normalized .= '.twig';
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * INTERNAL: produce HTML for fragment() from either closure or (template,data) array.
+     *
+     * @param callable|array<string,mixed> $producer
+     */
+    private function produceFragmentHtml(callable|array $producer): string
+    {
+        if (is_callable($producer)) {
+            $result = $producer();
+            if (!is_string($result)) {
+                throw new ViewException('fragment producer closure must return string HTML.');
+            }
+
+            return $result;
+        }
+
+        $template = $producer['template'] ?? null;
+        if (!is_string($template)) {
+            throw new ViewException("fragment producer array must contain 'template' => string");
+        }
+
+        /** @var array<string,mixed> $data */
+        $data = $producer['data'] ?? [];
+
+        return $this->render($template, $data);
     }
 
     /**
@@ -214,7 +265,7 @@ final class View implements ViewInterface
      */
     private function buildCoreExtension(): AbstractExtension
     {
-        return new class($this) extends AbstractExtension {
+        return new class ($this) extends AbstractExtension {
             public function __construct(private View $view) {}
 
             /**
@@ -222,111 +273,32 @@ final class View implements ViewInterface
              */
             public function getFunctions(): array
             {
-                $fns = [];
+                return [
+                    new TwigFunction(
+                        'fragment',
+                        function (string $key, int $ttl, callable|array $producer): string {
+                            return $this->view->fragment($key, $ttl, $producer);
+                        },
+                        ['is_safe' => ['html']]
+                    ),
+                    new TwigFunction(
+                        'view',
+                        function (string $tpl, array $data = []): string {
+                            return $this->view->render($tpl, $data);
+                        },
+                        ['is_safe' => ['html']]
+                    ),
+                    new TwigFunction(
+                        'theme_asset',
+                        function (string $assetPath): string {
+                            $builder = $this->view->getThemeBuilder();
 
-                // fragment('key', ttl, fn() => '<html>')
-                // fragment('sidebar', 300, {template:'partials/sidebar', data:{...}})
-                $fns[] = new TwigFunction(
-                    'fragment',
-                    /**
-                     * @param string $key
-                     * @param int $ttl
-                     * @param callable|array $producer
-                     */
-                    function (string $key, int $ttl, callable|array $producer): string {
-                        return $this->view->fragment($key, $ttl, $producer);
-                    },
-                    ['is_safe' => ['html']]
-                );
-
-                // Render nested partial:
-                // {{ view('components/button', {text: 'OK'})|raw }}
-                $fns[] = new TwigFunction(
-                    'view',
-                    /**
-                     * @param string $tpl
-                     * @param array<string,mixed> $data
-                     */
-                    function (string $tpl, array $data = []): string {
-                        return $this->view->render($tpl, $data);
-                    },
-                    ['is_safe' => ['html']]
-                );
-
-                // theme_asset('css/app.css')
-                // will return themed asset URL if ThemeBuilder exists,
-                // otherwise we just return the path untouched.
-                $fns[] = new TwigFunction(
-                    'theme_asset',
-                    /**
-                     * @param string $assetPath
-                     */
-                    function (string $assetPath): string {
-                        $builder = $this->view->getThemeBuilder();
-                        if ($builder === null) {
-                            return $assetPath;
+                            return $builder?->asset($assetPath) ?? $assetPath;
                         }
-                        return $builder->asset($assetPath);
-                    }
-                );
-
-                return $fns;
+                    ),
+                ];
             }
         };
-    }
-
-    /**
-     * INTERNAL: sync sharedData to Twig's global scope.
-     */
-    private function syncSharedGlobals(): void
-    {
-        foreach ($this->sharedData as $key => $value) {
-            $this->twig->addGlobal($key, $value);
-        }
-
-        // Also expose "theme" info globally if ThemeBuilder exists.
-        if ($this->themeBuilder !== null) {
-            $this->twig->addGlobal('_theme_name', $this->themeBuilder->current());
-            $this->twig->addGlobal('_theme_chain', $this->themeBuilder->chain());
-        }
-    }
-
-    /**
-     * INTERNAL: normalize logical name "home/index" => "home/index.twig"
-     */
-    private function normalizeTemplateName(string $name): string
-    {
-        $tplPath = Path::normalize($name);
-        $trimmed = ltrim($tplPath, '/');
-        if (str_contains($trimmed, '..')) {
-            throw new ViewException("Invalid template path '{$name}'");
-        }
-        return $trimmed . '.twig';
-    }
-
-    /**
-     * INTERNAL: produce HTML for fragment() from either closure or (template,data) array.
-     *
-     * @param callable():string|array{template:string,data?:array<string,mixed>} $producer
-     */
-    private function produceFragmentHtml(callable|array $producer): string
-    {
-        if (is_callable($producer)) {
-            $result = $producer();
-            if (!is_string($result)) {
-                throw new ViewException('fragment producer closure must return string HTML.');
-            }
-            return $result;
-        }
-
-        if (!isset($producer['template']) || !is_string($producer['template'])) {
-            throw new ViewException("fragment producer array must contain 'template' => string");
-        }
-
-        /** @var array<string,mixed> $data */
-        $data = $producer['data'] ?? [];
-
-        return $this->render($producer['template'], $data);
     }
 
     /**

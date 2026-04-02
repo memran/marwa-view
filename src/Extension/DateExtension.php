@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Marwa\View\Extension;
 
-use Twig\Extension\AbstractExtension;
-use Twig\TwigFilter;
+use DateTimeImmutable;
 use DateTimeInterface;
 use IntlDateFormatter;
+use Twig\Extension\AbstractExtension;
+use Twig\TwigFilter;
 
 /**
  * Adds date formatting filters.
@@ -27,35 +28,40 @@ final class DateExtension extends AbstractExtension
 
     public function formatDate(DateTimeInterface|string $date, string $pattern = 'medium', string $locale = 'en_US'): string
     {
-        if (!$date instanceof DateTimeInterface) {
-            $date = new \DateTime($date);
+        $date = $this->coerceDate($date);
+
+        if (!class_exists(IntlDateFormatter::class)) {
+            return $date->format($this->fallbackPattern($pattern));
         }
 
         $formatter = new IntlDateFormatter($locale, $this->resolvePattern($pattern), IntlDateFormatter::NONE);
-        return $formatter->format($date);
+        $formatted = $formatter->format($date);
+
+        return is_string($formatted) ? $formatted : $date->format($this->fallbackPattern($pattern));
     }
 
     public function timeAgo(DateTimeInterface|string $time): string
     {
-        if (!$time instanceof DateTimeInterface) {
-            $time = new \DateTime($time);
+        $time = $this->coerceDate($time);
+
+        $diff = time() - $time->getTimestamp();
+        if ($diff < 0) {
+            $futureDiff = abs($diff);
+
+            foreach ($this->units() as $secs => $label) {
+                if ($futureDiff >= $secs) {
+                    $value = (int) floor($futureDiff / $secs);
+
+                    return sprintf('in %d %s%s', $value, $label, $value > 1 ? 's' : '');
+                }
+            }
+
+            return 'just now';
         }
 
-        $diff = (new \DateTime())->getTimestamp() - $time->getTimestamp();
-
-        $units = [
-            31536000 => 'year',
-            2592000  => 'month',
-            604800   => 'week',
-            86400    => 'day',
-            3600     => 'hour',
-            60       => 'minute',
-            1        => 'second',
-        ];
-
-        foreach ($units as $secs => $label) {
+        foreach ($this->units() as $secs => $label) {
             if ($diff >= $secs) {
-                $value = floor($diff / $secs);
+                $value = (int) floor($diff / $secs);
                 return sprintf('%d %s%s ago', $value, $label, $value > 1 ? 's' : '');
             }
         }
@@ -70,5 +76,43 @@ final class DateExtension extends AbstractExtension
             'long'  => IntlDateFormatter::LONG,
             default => IntlDateFormatter::MEDIUM,
         };
+    }
+
+    private function fallbackPattern(string $pattern): string
+    {
+        return match ($pattern) {
+            'short' => 'Y-m-d',
+            'long' => 'F j, Y',
+            default => 'M j, Y',
+        };
+    }
+
+    private function coerceDate(DateTimeInterface|string $date): DateTimeInterface
+    {
+        if ($date instanceof DateTimeInterface) {
+            return $date;
+        }
+
+        try {
+            return new DateTimeImmutable($date);
+        } catch (\Exception $exception) {
+            throw new \InvalidArgumentException("Invalid date value '{$date}'", 0, $exception);
+        }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function units(): array
+    {
+        return [
+            31536000 => 'year',
+            2592000  => 'month',
+            604800   => 'week',
+            86400    => 'day',
+            3600     => 'hour',
+            60       => 'minute',
+            1        => 'second',
+        ];
     }
 }

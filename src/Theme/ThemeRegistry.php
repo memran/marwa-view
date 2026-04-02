@@ -19,6 +19,10 @@ final class ThemeRegistry
     public function add(ThemeConfig $theme): void
     {
         $name = $theme->name();
+        if (isset($this->themes[$name])) {
+            throw new \InvalidArgumentException("Theme '{$name}' is already registered");
+        }
+
         $this->themes[$name] = $theme;
     }
 
@@ -41,5 +45,13 @@ final class ThemeRegistry
             throw new ThemeNotFoundException("Theme '{$themeName}' not registered");
         }
         return $this->themes[$themeName];
+    }
+
+    /**
+     * @return array<string, ThemeConfig>
+     */
+    public function all(): array
+    {
+        return $this->themes;
     }
 }

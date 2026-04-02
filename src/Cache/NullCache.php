@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Marwa\View\Cache;
 
-use DateInterval;
 use Psr\SimpleCache\CacheInterface;
 
 /**
@@ -40,6 +39,9 @@ final class NullCache implements CacheInterface
         }
     }
 
+    /**
+     * @param iterable<string, mixed> $values
+     */
     public function setMultiple($values, $ttl = null): bool
     {
         return true;

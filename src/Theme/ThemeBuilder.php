@@ -84,6 +84,7 @@ final class ThemeBuilder
      * This is what we feed into Twig/Marwa\View loader.
      *
      * @throws TemplateNotFoundException
+     * @throws \InvalidArgumentException
      */
     public function template(string $relativeTemplatePath): string
     {
@@ -97,6 +98,8 @@ final class ThemeBuilder
     /**
      * Get a public asset URL for the active theme.
      * Can be exposed as a Twig function `theme_asset('css/app.css')`.
+     *
+     * @throws \InvalidArgumentException
      */
     public function asset(string $relativeAssetPath): string
     {
@@ -110,6 +113,8 @@ final class ThemeBuilder
     /**
      * Debug helper: return theme inheritance chain.
      * Example: ['tenantA', 'dark', 'default']
+     *
+     * @return list<string>
      */
     public function chain(): array
     {

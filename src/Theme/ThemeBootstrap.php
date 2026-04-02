@@ -22,6 +22,7 @@ final class ThemeBootstrap
         string $themesBaseDir,
         string $defaultTheme
     ): ThemeBuilder {
+        $themesBaseDir = realpath($themesBaseDir) ?: $themesBaseDir;
         if ($themesBaseDir === '' || !is_dir($themesBaseDir)) {
             throw new \InvalidArgumentException(
                 "Themes base directory '{$themesBaseDir}' is invalid or does not exist"
@@ -56,10 +57,22 @@ final class ThemeBootstrap
             }
 
             // Normalize manifest fields
-            $themeName    = $manifest['name']        ?? $dirName;
-            $parentName   = $manifest['parent']      ?? null;
-            $viewsPath    = $manifest['views_path']  ?? ($themeDir . DIRECTORY_SEPARATOR . 'views');
-            $assetsBase   = $manifest['assets_url']  ?? null;
+            $themeName = is_string($manifest['name'] ?? null) ? $manifest['name'] : $dirName;
+            $parentName = $manifest['parent'] ?? null;
+            if (!is_string($parentName) && $parentName !== null) {
+                throw new \RuntimeException("Theme '{$themeName}' manifest 'parent' must be a string or null");
+            }
+
+            $viewsPath = $manifest['views_path'] ?? ($themeDir . DIRECTORY_SEPARATOR . 'views');
+            if (!is_string($viewsPath) || $viewsPath === '') {
+                throw new \RuntimeException("Theme '{$themeName}' manifest 'views_path' must be a non-empty string");
+            }
+
+            if (!str_starts_with($viewsPath, DIRECTORY_SEPARATOR) && preg_match('/^[A-Za-z]:[\\\\\\/]/', $viewsPath) !== 1) {
+                $viewsPath = $themeDir . DIRECTORY_SEPARATOR . $viewsPath;
+            }
+
+            $assetsBase = $manifest['assets_url'] ?? null;
 
             if (!is_dir($viewsPath)) {
                 throw new \RuntimeException(
@@ -83,6 +96,8 @@ final class ThemeBootstrap
             $registry->add($config);
         }
 
+        self::validateRegistry($registry);
+
         // 3. Build resolver
         $resolver = new ThemeResolver();
 
@@ -100,7 +115,7 @@ final class ThemeBootstrap
      * INTERNAL:
      * Try to load manifest.php or manifest.json from a theme dir.
      *
-     * Returns assoc array OR null if manifest not found.
+     * @return array<string, mixed>|null
      */
     private static function loadManifest(string $themeDir): ?array
     {
@@ -130,5 +145,23 @@ final class ThemeBootstrap
 
         // no manifest in this folder
         return null;
+    }
+
+    private static function validateRegistry(ThemeRegistry $registry): void
+    {
+        foreach ($registry->all() as $theme) {
+            $parent = $theme->parent();
+            if ($parent === null) {
+                continue;
+            }
+
+            if ($parent === $theme->name()) {
+                throw new \RuntimeException("Theme '{$theme->name()}' cannot inherit from itself");
+            }
+
+            if (!$registry->has($parent)) {
+                throw new \RuntimeException("Theme '{$theme->name()}' references unknown parent theme '{$parent}'");
+            }
+        }
     }
 }

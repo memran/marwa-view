@@ -11,16 +11,9 @@ namespace Marwa\View\Theme;
  */
 final class ThemeConfig
 {
-    /** @var string */
     private string $name;
-
-    /** @var string Absolute filesystem path to this theme's root directory */
     private string $path;
-
-    /** @var string|null Parent theme name for inheritance fallback */
     private ?string $parent;
-
-    /** @var string Public base URL for assets of this theme (e.g. /themes/default) */
     private string $assetBaseUrl;
 
     /**
@@ -35,20 +28,36 @@ final class ThemeConfig
         ?string $parent,
         string $assetBaseUrl
     ) {
+        $name = trim($name);
         if ($name === '') {
             throw new \InvalidArgumentException('Theme name cannot be empty');
         }
 
-        if ($path === '' || !is_dir($path)) {
+        if (preg_match('/^[A-Za-z0-9][A-Za-z0-9_-]*$/', $name) !== 1) {
+            throw new \InvalidArgumentException('Theme name may only contain letters, numbers, dashes, and underscores');
+        }
+
+        $realPath = realpath($path);
+        if ($realPath === false || !is_dir($realPath)) {
             throw new \InvalidArgumentException('Theme path must be an existing directory');
         }
 
+        $parent = $parent !== null ? trim($parent) : null;
+        if ($parent === '') {
+            $parent = null;
+        }
+
+        if ($parent !== null && preg_match('/^[A-Za-z0-9][A-Za-z0-9_-]*$/', $parent) !== 1) {
+            throw new \InvalidArgumentException('Parent theme name may only contain letters, numbers, dashes, and underscores');
+        }
+
+        $assetBaseUrl = trim($assetBaseUrl);
         if ($assetBaseUrl === '') {
             throw new \InvalidArgumentException('Asset base URL cannot be empty');
         }
 
         $this->name         = $name;
-        $this->path         = rtrim($path, DIRECTORY_SEPARATOR);
+        $this->path         = rtrim($realPath, DIRECTORY_SEPARATOR);
         $this->parent       = $parent;
         $this->assetBaseUrl = rtrim($assetBaseUrl, '/');
     }

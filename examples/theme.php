@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-use Marwa\View\View;
-use Marwa\View\ViewConfig;
 use Marwa\View\Support\Path;
+use Marwa\View\Theme\ThemeBuilder;
 use Marwa\View\Theme\ThemeConfig;
 use Marwa\View\Theme\ThemeRegistry;
 use Marwa\View\Theme\ThemeResolver;
-use Marwa\View\Theme\ThemeBuilder;
+use Marwa\View\View;
+use Marwa\View\ViewConfig;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
@@ -18,12 +18,6 @@ $registry = new ThemeRegistry();
 // absolute paths to each theme's views dir
 $defaultViewsPath = Path::join(__DIR__, 'views', 'themes', 'default', 'views');
 $darkViewsPath    = Path::join(__DIR__, 'views', 'themes', 'dark', 'views');
-
-
-
-if ($defaultViewsPath === false || $darkViewsPath === false) {
-    throw new RuntimeException('Theme directories not found. Check your paths.');
-}
 
 // Each theme gets: name, absolute path to its views, parent theme name (or null), asset base URL.
 $registry->add(
