@@ -26,11 +26,22 @@
     }
   },
   "require-dev": {
-    "memran/php-testify": "^1.0",
+    "friendsofphp/php-cs-fixer": "^3.88",
+    "phpstan/phpstan": "^2.1",
+    "phpunit/phpunit": "^11.5",
     "symfony/var-dumper": "^7.0"
   },
   "scripts": {
-    "test": "php vendor/bin/testify"
+    "test": "phpunit --configuration phpunit.xml.dist",
+    "test:coverage": "phpunit --configuration phpunit.xml.dist --coverage-text",
+    "analyse": "phpstan analyse --configuration phpstan.neon.dist --no-progress --debug --memory-limit=512M",
+    "lint": "php-cs-fixer fix --config=.php-cs-fixer.dist.php --dry-run --diff --verbose --sequential",
+    "fix": "php-cs-fixer fix --config=.php-cs-fixer.dist.php --verbose --sequential",
+    "ci": [
+      "@lint",
+      "@analyse",
+      "@test"
+    ]
   },
   "minimum-stability": "stable",
   "prefer-stable": true,

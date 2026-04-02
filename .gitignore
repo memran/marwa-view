@@ -1,31 +1,6 @@
-# Composer
 /vendor/
-/cache/
-composer.lock
-
-# IDEs & OS
-/.idea/
-/.vscode/
-*.log
-.DS_Store
-Thumbs.db
-
-# PHPUnit / Coverage
-.phpunit.cache
-/phpunit.xml
-/build/
-coverage/
-.cache/
-
-# Runtime
-/storage/views/*
-/examples/storage/*
-!/storage/views/.gitkeep
-
-# Twig Cache
-/storage/framework/twig/*
-!/storage/framework/twig/.gitkeep
-
-# Temporary
-/tmp/
-*.tmp
+/.phpunit.cache/
+/.phpstan/
+/.php-cs-fixer.cache
+/coverage/
+/examples/storage/

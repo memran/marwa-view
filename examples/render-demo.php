@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 $view = require __DIR__ . '/bootstrap.php';
 
 $html = $view->render('simple-demo', [

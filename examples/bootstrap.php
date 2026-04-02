@@ -7,11 +7,11 @@ declare(strict_types=1);
 // -----------------------------------------------------------------------------
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use Marwa\View\View;
-use Marwa\View\ViewConfig;
-use Marwa\View\Extension\{AssetExtension, TextExtension, DateExtension, UrlExtension};
+use Marwa\View\Extension\{AssetExtension, DateExtension, TextExtension, UrlExtension};
 use Marwa\View\Extension\TranslateExtension;
 use Marwa\View\Translate\ArrayTranslator;
+use Marwa\View\View;
+use Marwa\View\ViewConfig;
 
 $translator = new ArrayTranslator(
     defaultLocale: 'en',

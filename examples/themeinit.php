@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Marwa\View\Theme\ThemeBootstrap;
 use Marwa\View\View;
 use Marwa\View\ViewConfig;
