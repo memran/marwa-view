@@ -52,6 +52,7 @@ composer install
 - [Create an Extension](docs/create-extension.md)
 - [Themes](docs/themes.md)
 - [Create a Theme](docs/create-theme.md)
+- [Framework Integration](docs/framework-integration.md)
 - [Examples](docs/examples.md)
 - [Development](docs/development.md)
 
