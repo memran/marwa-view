@@ -1,11 +1,28 @@
 # Marwa\View
 
-`Marwa\View` is a small Twig-based view library for PHP applications that want a clean rendering API, optional fragment caching, and theme-aware template resolution without coupling application code to Twig internals.
+[![CI](https://github.com/memran/marwa-view/actions/workflows/ci.yml/badge.svg)](https://github.com/memran/marwa-view/actions/workflows/ci.yml)
+[![PHP 8.2+](https://img.shields.io/badge/PHP-8.2%2B-777bb4.svg)](https://www.php.net/)
+[![PHPStan 2.x](https://img.shields.io/badge/PHPStan-2.x-31C652.svg)](https://phpstan.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+`Marwa\View` is a framework-agnostic view layer for PHP 8.2+ built on Twig. It gives application code a small public API, optional PSR-16 fragment caching, theme inheritance, and extension points without forcing the rest of the app to depend directly on Twig internals.
+
+## Features
+
+- Small public API centered on `View`, `ViewConfig`, and `ViewInterface`
+- Twig-powered rendering with strict variables and auto-reload in debug mode
+- Shared view data through `share()`
+- Nested partial rendering through `view()` inside templates
+- PSR-16 fragment caching through `fragment()`
+- Optional runtime theme switching with `ThemeBuilder`
+- Theme inheritance for templates and theme-specific asset URLs
+- Optional extensions for assets, URLs, text helpers, dates, and translations
+- PHPUnit, PHPStan 2.x, PHP-CS-Fixer, Composer scripts, and GitHub Actions CI
 
 ## Requirements
 
-- PHP 8.1+
-- Composer
+- PHP 8.2+
+- Composer 2
 
 ## Installation
 
@@ -13,13 +30,26 @@
 composer require memran/marwa-view
 ```
 
-For local development:
+For package development:
 
 ```bash
 composer install
 ```
 
-## Quick Start
+## Tutorial
+
+### 1. Create a views directory
+
+```text
+project/
+  views/
+    home/
+      index.twig
+  storage/
+    views/
+```
+
+### 2. Configure the renderer
 
 ```php
 <?php
@@ -38,76 +68,229 @@ $config = new ViewConfig(
 );
 
 $view = new View($config);
-$view->share('appName', 'Marwa Demo');
+```
 
-echo $view->render('home/index', [
-    'title' => 'Welcome',
+### 3. Share global view data
+
+```php
+$view->share('appName', 'Marwa Demo');
+$view->share('auth', [
+    'id' => 42,
+    'name' => 'Emran',
 ]);
 ```
 
-Templates are referenced by logical name. `home/index` resolves to `home/index.twig`.
+### 4. Render a template
 
-## Features
+```php
+echo $view->render('home/index', [
+    'title' => 'Dashboard',
+]);
+```
 
-- Clean `View::render()` and `View::display()` API
-- Shared render context via `share()`
-- PSR-16 fragment caching through `fragment()`
-- Optional theme inheritance with `ThemeBuilder`
-- Optional Twig extensions for assets, URLs, dates, text, and translations
-- Debug-friendly Twig configuration with strict variables in debug mode
+Logical template names are slash-based. `home/index` resolves to `home/index.twig`.
 
-## Configuration
+### 5. Use the data in Twig
 
-`ViewConfig` validates the template directory and cache directory up front. Cache directories are created automatically when possible.
+```twig
+{# views/home/index.twig #}
+<h1>{{ title }}</h1>
+<p>Welcome to {{ appName }}</p>
+<p>Signed in as {{ auth.name }}</p>
+```
+
+## Public API
+
+### `Marwa\View\ViewConfig`
+
+Creates the renderer configuration and validates paths eagerly.
 
 ```php
 $config = new ViewConfig(
     viewsPath: __DIR__ . '/views',
     cachePath: __DIR__ . '/storage/views',
     debug: false,
-    fragmentCache: $psr16Cache, // optional
+    fragmentCache: $cache, // optional PSR-16 cache
 );
 ```
 
-Production recommendations:
+Constructor arguments:
 
-- set `debug` to `false`
-- use a persistent PSR-16 cache implementation for fragments
-- place the Twig cache on a writable disk outside the public web root
-- avoid passing unvalidated user input directly into template names or theme names
+- `viewsPath`: base directory that contains `.twig` templates
+- `cachePath`: writable Twig compilation cache directory
+- `debug`: enables Twig debug-friendly behavior
+- `fragmentCache`: optional PSR-16 cache used by `fragment()`
 
-## Rendering and Partials
+### `Marwa\View\View`
+
+Main rendering service.
+
+```php
+$view = new View($config, extensions: [
+    // optional Twig extensions
+]);
+```
+
+Public methods:
+
+- `render(string $template, array $data = []): string`
+- `display(string $template, array $data = []): void`
+- `share(string $name, mixed $value): void`
+- `clearCache(): void`
+- `fragment(string $key, int $ttl, callable|array $producer): string`
+- `addExtension(AbstractExtension $extension): void`
+- `getThemeBuilder(): ?ThemeBuilder`
+
+### `Marwa\View\ViewInterface`
+
+Stable contract for application code that only needs rendering, shared data, and cache clearing.
+
+### Theme API
+
+The theming system lives under `Marwa\View\Theme`:
+
+- `ThemeConfig`: immutable theme definition
+- `ThemeRegistry`: collection of registered themes
+- `ThemeResolver`: resolves template and asset lookups through the inheritance chain
+- `ThemeBuilder`: runtime facade used by the view layer
+- `ThemeBootstrap`: convenience loader that builds themes from a directory structure
+
+### Translation API
+
+The translation helpers live under `Marwa\View\Translate`:
+
+- `TranslatorInterface`
+- `ArrayTranslator`
+
+## Usage Guide
+
+### Basic rendering
 
 ```php
 echo $view->render('dashboard', [
     'user' => $user,
+    'metrics' => $metrics,
 ]);
 ```
 
-Inside Twig:
+### Shared data
 
-```twig
-{{ view('components/card', { title: 'Status' })|raw }}
+```php
+$view->share('csrf', 'token-value');
+$view->share('locale', 'en');
 ```
 
-## Fragment Caching
+### Display directly
+
+```php
+$view->display('pages/about');
+```
+
+### Nested partials in Twig
+
+```twig
+{{ view('components/card', { title: 'Status', value: 'Healthy' })|raw }}
+```
+
+### Fragment caching
+
+From Twig:
 
 ```twig
 {{ fragment('sidebar', 300, {
     template: 'partials/sidebar',
-    data: { user: user }
+    data: { user: auth }
 })|raw }}
 ```
 
-You can also pass a closure from PHP:
+From PHP:
 
 ```php
 $html = $view->fragment('stats', 60, fn (): string => '<strong>Cached</strong>');
 ```
 
+### Clearing caches
+
+```php
+$view->clearCache();
+```
+
+This clears both the PSR-16 fragment cache and compiled Twig cache files for the configured renderer.
+
+## Extensions
+
+The package ships with optional Twig extensions:
+
+- `AssetExtension`
+- `UrlExtension`
+- `TextExtension`
+- `DateExtension`
+- `TranslateExtension`
+
+Example:
+
+```php
+use Marwa\View\Extension\AssetExtension;
+use Marwa\View\Extension\DateExtension;
+use Marwa\View\Extension\TextExtension;
+use Marwa\View\Extension\TranslateExtension;
+use Marwa\View\Extension\UrlExtension;
+use Marwa\View\Translate\ArrayTranslator;
+
+$translator = new ArrayTranslator('en', __DIR__ . '/lang');
+
+$view = new View($config, [
+    new AssetExtension('/static', '1.0.0'),
+    new TextExtension(),
+    new DateExtension(),
+    new UrlExtension('https://example.com'),
+    new TranslateExtension($translator),
+]);
+```
+
 ## Themes
 
-Themes support template inheritance and theme-specific asset URLs.
+Themes are optional. When enabled, Twig still supports `extends`, `include`, and other loader-based features while the active theme changes at runtime.
+
+### Theme directory structure
+
+```text
+themes/
+  default/
+    manifest.php
+    views/
+      layout.twig
+      home/
+        index.twig
+    assets/
+      css/
+        app.css
+  dark/
+    manifest.php
+    views/
+      layout.twig
+  tenantA/
+    manifest.php
+    views/
+      home/
+        index.twig
+```
+
+### Theme manifest
+
+```php
+<?php
+
+declare(strict_types=1);
+
+return [
+    'name' => 'tenantA',
+    'parent' => 'dark',
+    'assets_url' => '/themes/tenantA',
+];
+```
+
+### Bootstrap themes from a directory
 
 ```php
 use Marwa\View\Theme\ThemeBootstrap;
@@ -122,44 +305,33 @@ $themeBuilder = ThemeBootstrap::initFromDirectory(
 $themeBuilder->useTheme('tenantA');
 
 $view = new View(
-    new ViewConfig(__DIR__ . '/views', __DIR__ . '/storage/views', true),
+    config: new ViewConfig(
+        viewsPath: __DIR__ . '/views',
+        cachePath: __DIR__ . '/storage/views',
+        debug: true,
+    ),
     themeBuilder: $themeBuilder,
 );
 
 echo $view->render('home/index');
 ```
 
-Expected theme folder structure:
+### Access theme data in Twig
 
-```text
-themes/
-  default/
-    manifest.php
-    views/
-    assets/
-  tenantA/
-    manifest.php
-    views/
-    assets/
+Available globals:
+
+- `_theme_name`
+- `_theme_chain`
+
+Helper function:
+
+```twig
+<link rel="stylesheet" href="{{ theme_asset('css/app.css') }}">
 ```
-
-Example `manifest.php`:
-
-```php
-<?php
-
-return [
-    'name' => 'tenantA',
-    'parent' => 'default',
-    'assets_url' => '/themes/tenantA',
-];
-```
-
-Inside Twig, `theme_asset('css/app.css')` resolves against the active theme.
 
 ## Translation
 
-The bundled `ArrayTranslator` loads locale arrays from a directory of PHP files:
+`ArrayTranslator` loads locale files from a directory of PHP arrays.
 
 ```php
 use Marwa\View\Extension\TranslateExtension;
@@ -172,10 +344,12 @@ $view = new View($config, [
 ]);
 ```
 
-Example language file:
+Locale file example:
 
 ```php
 <?php
+
+declare(strict_types=1);
 
 return [
     'welcome.title' => 'Welcome, :name!',
@@ -193,35 +367,21 @@ Twig usage:
 {{ tc('cart.items', cartCount) }}
 ```
 
-## Folder Overview
+## Example Files
 
-```text
-src/
-  Cache/
-  Exception/
-  Extension/
-  Support/
-  Theme/
-  Translate/
-examples/
-tests/
-```
+The repository includes runnable examples:
 
-## Development Workflow
+- [examples/index.php](/Users/memran/projects/php-projects/marwa-view/examples/index.php): minimal rendering example
+- [examples/bootstrap.php](/Users/memran/projects/php-projects/marwa-view/examples/bootstrap.php): configured renderer with extensions
+- [examples/render-demo.php](/Users/memran/projects/php-projects/marwa-view/examples/render-demo.php): simple demo page
+- [examples/demo.php](/Users/memran/projects/php-projects/marwa-view/examples/demo.php): larger rendering demo
+- [examples/theme.php](/Users/memran/projects/php-projects/marwa-view/examples/theme.php): manual theme registry example
+- [examples/themeinit.php](/Users/memran/projects/php-projects/marwa-view/examples/themeinit.php): `ThemeBootstrap` example
+- [examples/switch-theme.php](/Users/memran/projects/php-projects/marwa-view/examples/switch-theme.php): runtime theme switch example
 
-Install dependencies:
+## Quality Tooling
 
-```bash
-composer install
-```
-
-Run the full local quality suite:
-
-```bash
-composer ci
-```
-
-Available scripts:
+Available Composer scripts:
 
 - `composer test`
 - `composer test:coverage`
@@ -230,40 +390,27 @@ Available scripts:
 - `composer fix`
 - `composer ci`
 
-## Static Analysis and Linting
+Configuration files:
 
-- PHPUnit is configured through [`phpunit.xml.dist`](/Users/memran/projects/php-projects/marwa-view/phpunit.xml.dist)
-- PHPStan is configured through [`phpstan.neon.dist`](/Users/memran/projects/php-projects/marwa-view/phpstan.neon.dist)
-- PHP-CS-Fixer is configured through [`.php-cs-fixer.dist.php`](/Users/memran/projects/php-projects/marwa-view/.php-cs-fixer.dist.php)
+- [phpunit.xml.dist](/Users/memran/projects/php-projects/marwa-view/phpunit.xml.dist)
+- [phpstan.neon.dist](/Users/memran/projects/php-projects/marwa-view/phpstan.neon.dist)
+- [.php-cs-fixer.dist.php](/Users/memran/projects/php-projects/marwa-view/.php-cs-fixer.dist.php)
+- [.github/workflows/ci.yml](/Users/memran/projects/php-projects/marwa-view/.github/workflows/ci.yml)
 
-## CI
+## Production Notes
 
-GitHub Actions runs Composer validation, dependency installation, linting, static analysis, and tests on pull requests and pushes. The workflow lives at [`.github/workflows/ci.yml`](/Users/memran/projects/php-projects/marwa-view/.github/workflows/ci.yml).
-
-## Deployment Notes
-
-- warm up Composer autoloading with `composer install --no-dev --optimize-autoloader`
-- ensure the Twig cache path is writable in the target environment
-- disable debug mode in production
-- expose only compiled/public assets, not cache directories or vendor files
-- treat theme manifests and translation files as trusted application code
+- Set `debug` to `false` outside development.
+- Use a real PSR-16 cache backend in production.
+- Keep Twig cache directories writable but outside the public web root.
+- Do not pass raw user input directly to template names or theme names.
+- Treat theme manifests and translation files as trusted application code.
 
 ## Contributing
 
-1. Install dependencies with `composer install`.
+1. Run `composer install`.
 2. Make focused changes with tests.
 3. Run `composer ci`.
-4. Open a pull request describing the problem, approach, and verification.
-
-## Release Notes
-
-Current production-readiness improvements in this iteration:
-
-- fixed theme autoloading and namespace portability issues
-- replaced ad hoc themed template rendering with a proper Twig loader
-- tightened template and asset path validation
-- added PHPUnit coverage for rendering, themes, translator behavior, and path handling
-- added PHPStan, PHP-CS-Fixer, Composer quality scripts, and GitHub Actions
+4. Open a pull request with the problem, approach, and verification summary.
 
 ## License
 

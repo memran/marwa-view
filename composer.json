@@ -1,6 +1,6 @@
 {
   "name": "memran/marwa-view",
-  "description": "A thin, developer-friendly PSR-compliant View Engine built on top of Twig with PSR-16 caching. Part of the MarwaPHP ecosystem.",
+  "description": "A modern Twig-powered view layer for PHP 8.2+ with fragment caching, theme inheritance, and framework-agnostic DX.",
   "type": "library",
   "license": "MIT",
   "authors": [
@@ -10,7 +10,7 @@
     }
   ],
   "require": {
-    "php": "^8.1",
+    "php": "^8.2",
     "twig/twig": "^3.21",
     "psr/simple-cache": "^3.0",
     "symfony/translation": "^7.3"
