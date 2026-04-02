@@ -1,0 +1,211 @@
+{# ====================================================================== #}
+{# full-demo.twig                                                         #}
+{# A "kitchen sink" template showing:                                     #}
+{#   - variables / filters / math                                         #}
+{#   - conditionals / loops / for-else                                    #}
+{#   - block / extends / embed                                            #}
+{#   - include / import / macro / set                                     #}
+{#   - loop helpers, spaceless, raw                                       #}
+{#   - dump() (in debug)                                                  #}
+{#   - our helpers: view(), fragment()                                    #}
+{#   - globals: appName, csrf, auth                                       #}
+{# ====================================================================== #}
+
+{% extends "layouts/base.twig" %}
+
+{% block title %}Full Demo | {{ appName }}{% endblock %}
+
+{% block body %}
+  {{ push_meta('description', 'Full Marwa\\View demo with stacks, namespaced views, icons, and formatting helpers.') }}
+  {{ push_property_meta('og:title', appName ~ ' demo') }}
+  {{ push_script_tag(url('/static/app.js'), { defer: true }) }}
+  {% set analyticsScript %}
+    <script>
+      window.demoAnalytics = { page: 'full-demo', app: '{{ appName|e('js') }}' };
+    </script>
+  {% endset %}
+  {{ push('scripts', analyticsScript) }}
+
+  {% set headMeta %}
+    <meta name="demo-module" content="full-demo"/>
+  {% endset %}
+  {{ prepend('head', headMeta) }}
+
+  {% set total = 0 %}
+  {% for client in clients %}
+    {% set total = total + client.revenue_monthly %}
+  {% endfor %}
+
+  <main class="mx-auto max-w-7xl px-6 py-14 sm:px-8">
+    <header class="rounded-[2rem] border border-white/10 bg-slate-900/70 p-8 shadow-glow backdrop-blur sm:p-10">
+      <div class="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
+        <div class="max-w-3xl">
+          <div class="inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-brand-100">
+            Full Demo
+          </div>
+          <h1 class="mt-5 text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
+            Framework-style templates with modern defaults
+          </h1>
+          <p class="mt-4 text-lg leading-8 text-slate-300">
+            This example demonstrates control flow, nested rendering, namespaced module views, shared globals, and stack injection through a single developer-facing template.
+          </p>
+        </div>
+
+        <div class="grid gap-3 sm:grid-cols-3 xl:min-w-[420px]">
+          <div class="rounded-3xl border border-white/10 bg-white/6 p-4">
+            <div class="text-xs uppercase tracking-[0.2em] text-slate-500">Session</div>
+            <div class="mt-2 text-2xl font-bold text-white">{{ number(user.session_minutes / 60, 1) }}h</div>
+          </div>
+          <div class="rounded-3xl border border-white/10 bg-white/6 p-4">
+            <div class="text-xs uppercase tracking-[0.2em] text-slate-500">Clients</div>
+            <div class="mt-2 text-2xl font-bold text-white">{{ number(clients|length) }}</div>
+          </div>
+          <div class="rounded-3xl border border-white/10 bg-white/6 p-4">
+            <div class="text-xs uppercase tracking-[0.2em] text-slate-500">Revenue</div>
+            <div class="mt-2 text-2xl font-bold text-white">{{ compact_number(total, 1) }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-8 grid gap-4 lg:grid-cols-[1.5fr_0.7fr]">
+        <div class="rounded-3xl border border-white/10 bg-slate-950/50 p-5 text-sm leading-7 text-slate-300">
+          Hello, <span class="font-semibold text-white">{{ user.name|default('Guest')|title }}</span>. You are inside <strong class="text-white">{{ appName }}</strong> and rendering through a stable API.
+          <div class="mt-3 rounded-2xl bg-white/5 px-4 py-3 font-mono text-xs text-slate-400">CSRF token: {{ csrf }}</div>
+        </div>
+        <div class="rounded-3xl border border-white/10 bg-slate-950/50 p-5 text-sm leading-7 text-slate-300">
+          <div>Account created: <span class="font-medium text-white">{{ user.created_at|date("Y-m-d H:i") }}</span></div>
+          <div class="mt-2">Role: <span class="font-medium text-white">{{ user.role|title }}</span></div>
+        </div>
+      </div>
+    </header>
+
+    <section class="mt-8 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+      <div class="space-y-6">
+        <section class="rounded-[2rem] border border-white/10 bg-slate-900/70 p-6 backdrop-blur">
+          <div class="flex items-center gap-3">
+            {{ icon('spark', { class: 'h-5 w-5 text-brand-200' }) }}
+            <h2 class="text-xl font-semibold text-white">Conditional Logic</h2>
+          </div>
+
+          {% if user.is_admin %}
+            <div class="mt-4 rounded-3xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+              Administrator access is enabled for this session.
+            </div>
+          {% elseif user.role == 'manager' %}
+            <div class="mt-4 rounded-3xl border border-blue-400/20 bg-blue-500/10 p-4 text-sm text-blue-100">
+              Manager dashboard access is active.
+            </div>
+          {% else %}
+            <div class="mt-4 rounded-3xl border border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">
+              Standard user privileges are active.
+            </div>
+          {% endif %}
+        </section>
+
+
+        <section class="rounded-[2rem] border border-white/10 bg-slate-900/70 p-6 backdrop-blur">
+          <div class="flex items-center justify-between gap-4">
+            <h2 class="text-xl font-semibold text-white">Looping Over Collections</h2>
+            <div class="text-xs uppercase tracking-[0.2em] text-slate-500">for / else</div>
+          </div>
+
+          <div class="mt-4 overflow-hidden rounded-3xl border border-white/8">
+            <table class="w-full text-left text-sm">
+              <thead class="bg-white/5 text-slate-300">
+                <tr>
+                  <th class="px-4 py-3 font-semibold">#</th>
+                  <th class="px-4 py-3 font-semibold">Client</th>
+                  <th class="px-4 py-3 font-semibold">Status</th>
+                  <th class="px-4 py-3 text-right font-semibold">Revenue</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/8 bg-slate-950/30">
+              {% for client in clients %}
+                <tr class="text-slate-200">
+                  <td class="px-4 py-3 text-slate-500">{{ loop.index }}</td>
+                  <td class="px-4 py-3 font-medium">{{ client.name }}</td>
+                  <td class="px-4 py-3">
+                    <span class="{{ class_names(
+                      'rounded-full px-2.5 py-1 text-xs font-semibold',
+                      client.active ? 'bg-emerald-500/10 text-emerald-300' : 'bg-slate-700/70 text-slate-300'
+                    ) }}">
+                      {{ client.active ? 'Active' : 'Inactive' }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-right font-mono text-slate-300">
+                    {{ money(client.revenue_monthly, 'USD') }}
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="4" class="px-4 py-5 text-center text-slate-500">
+                    No clients found.
+                  </td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <p class="mt-4 text-sm text-slate-400">
+            Total revenue this month:
+            <strong class="font-mono text-white">{{ money(total, 'USD') }}</strong>
+          </p>
+        </section>
+
+
+        <section class="rounded-[2rem] border border-white/10 bg-slate-900/70 p-6 backdrop-blur">
+          <h2 class="text-xl font-semibold text-white">Variable Manipulation</h2>
+
+          {% set welcome = "hello " ~ user.name|default('friend') %}
+          {% set shout = welcome|upper %}
+
+          <div class="mt-4 rounded-3xl bg-slate-950/70 p-5 font-mono text-xs leading-7 text-slate-200">
+            welcome = "{{ welcome }}"<br>
+            shout   = "{{ shout }}"<br>
+            length  = {{ welcome|length }} chars<br>
+            now     = {{ "now"|date("c") }}<br>
+          </div>
+        </section>
+      </div>
+
+      <div class="space-y-6">
+        <section class="rounded-[2rem] border border-white/10 bg-slate-900/70 p-6 backdrop-blur">
+          <h2 class="text-xl font-semibold text-white">Namespaced Module Views</h2>
+          <p class="mt-2 text-sm leading-6 text-slate-400">The card below is rendered from <code class="font-mono text-slate-200">@Blog/teaser</code>.</p>
+          <div class="mt-4">
+            {{ view('@Blog/teaser', { appName: appName })|raw }}
+          </div>
+        </section>
+
+        <section class="rounded-[2rem] border border-white/10 bg-slate-900/70 p-6 backdrop-blur">
+          <h2 class="text-xl font-semibold text-white">Template Notes</h2>
+          <ul class="mt-4 space-y-3 text-sm leading-6 text-slate-300">
+            <li>Stack content is injected into the shared layout head and scripts sections.</li>
+            <li>Application code still renders through <code class="font-mono text-slate-200">$view->render()</code>.</li>
+            <li>Nested views and fragment caching stay available without leaking Twig into the application layer.</li>
+          </ul>
+          <div class="mt-5 rounded-3xl bg-slate-950/50 p-4 text-xs text-slate-400">
+            {{ json_script('demo-state', {
+              app: appName,
+              user: { id: user.id, role: user.role },
+              clientCount: clients|length
+            }) }}
+            Frontend bootstrap payload embedded with <code class="font-mono text-slate-200">json_script()</code>.
+          </div>
+        </section>
+      </div>
+    </section>
+
+
+
+    {# ------------------------------------------------------------------ #}
+    {# FOOTER VIA include                                                #}
+    {# ------------------------------------------------------------------ #}
+    <footer class="pt-10 text-center text-[11px] text-slate-500">
+      {% include "partials/footer.twig" %}
+    </footer>
+
+  </main>
+
+{% endblock %}

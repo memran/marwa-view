@@ -130,4 +130,29 @@ PHP);
 
         self::assertSame('Default Theme|Marwa Team|1|light,core', $view->render('home/index'));
     }
+
+    public function testThemeModeCanRenderNamespacedModuleViews(): void
+    {
+        $themes = $this->makeTempDirectory('themes-');
+        $cache = $this->makeTempDirectory('cache-');
+        $moduleViews = $this->makeTempDirectory('module-views-');
+
+        $this->writeFile($themes . '/default/manifest.php', <<<'PHP'
+<?php
+return [
+    'name' => 'default',
+    'assets_url' => '/themes/default',
+];
+PHP);
+        $this->writeFile($themes . '/default/views/home/index.twig', '{{ view("@Admin/toolbar", { title: "Control Panel" })|raw }}');
+        $this->writeFile($moduleViews . '/toolbar.twig', '<nav>{{ title }}</nav>');
+
+        $view = new View(
+            new ViewConfig($themes . '/default/views', $cache, true, null, ['Admin' => $moduleViews]),
+            [],
+            ThemeBootstrap::initFromDirectory($themes, 'default')
+        );
+
+        self::assertSame('<nav>Control Panel</nav>', $view->render('home/index'));
+    }
 }

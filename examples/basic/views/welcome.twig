@@ -1,0 +1,63 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Welcome — MarwaPHP{% endblock %}
+
+{% block body %}
+  <main class="mx-auto flex min-h-screen max-w-6xl items-center px-6 py-16 sm:px-8">
+    <section class="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+      <div>
+        <div class="inline-flex rounded-full border border-brand-400/30 bg-brand-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-brand-100">
+          Marwa\View Example
+        </div>
+        <h1 class="mt-6 text-5xl font-extrabold tracking-tight text-white sm:text-6xl">
+          Developer-friendly views with a polished default presentation.
+        </h1>
+        <p class="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
+          Render templates through a small, stable API, keep Twig internal, and ship examples that feel closer to a real product than a bare proof-of-concept.
+        </p>
+        <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+          <a href="#quick-start" class="inline-flex items-center justify-center rounded-2xl bg-brand-500 px-6 py-3 text-sm font-semibold text-white shadow-glow transition hover:bg-brand-400">
+            Explore the quick start
+          </a>
+          <a href="#templates" class="inline-flex items-center justify-center rounded-2xl border border-white/12 bg-white/5 px-6 py-3 text-sm font-semibold text-slate-100 transition hover:bg-white/10">
+            Inspect template patterns
+          </a>
+        </div>
+      </div>
+
+      <div class="rounded-[2rem] border border-white/10 bg-slate-900/70 p-6 shadow-glow backdrop-blur">
+        <div class="flex items-center gap-3">
+          <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-500/15 text-brand-100">
+            <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M4 18V6h2l6 6 6-6h2v12h-2V9.6l-6 6-6-6V18H4z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="text-sm font-semibold text-white">Framework Template Layer</div>
+            <div class="text-sm text-slate-400">Readable by app developers, not just Twig users.</div>
+          </div>
+        </div>
+        <div class="mt-6 rounded-2xl bg-slate-950/70 p-5 font-mono text-sm leading-7 text-slate-200">
+          <div class="text-slate-500">$view->render('welcome', [</div>
+          <div class="pl-4"><span class="text-brand-200">'name'</span> => <span class="text-emerald-300">'Marwa'</span>,</div>
+          <div class="pl-4"><span class="text-brand-200">'team'</span> => <span class="text-emerald-300">'Platform'</span>,</div>
+          <div>]);</div>
+        </div>
+        <div id="quick-start" class="mt-6 grid gap-3 sm:grid-cols-3">
+          <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div class="text-xs uppercase tracking-[0.2em] text-slate-500">Step 1</div>
+            <div class="mt-2 text-sm font-semibold text-white">Configure paths</div>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div class="text-xs uppercase tracking-[0.2em] text-slate-500">Step 2</div>
+            <div class="mt-2 text-sm font-semibold text-white">Share global data</div>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div class="text-xs uppercase tracking-[0.2em] text-slate-500">Step 3</div>
+            <div class="mt-2 text-sm font-semibold text-white">Render named templates</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+{% endblock %}

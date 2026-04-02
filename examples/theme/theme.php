@@ -1,0 +1,85 @@
+<?php
+
+declare(strict_types=1);
+
+use Marwa\View\Support\Path;
+use Marwa\View\Theme\ThemeBuilder;
+use Marwa\View\Theme\ThemeConfig;
+use Marwa\View\Theme\ThemeRegistry;
+use Marwa\View\Theme\ThemeResolver;
+use Marwa\View\View;
+use Marwa\View\ViewConfig;
+
+require_once __DIR__ . '/../../vendor/autoload.php';
+
+// 1. Build ThemeRegistry and add themes
+$registry = new ThemeRegistry();
+
+// absolute paths to each theme's views dir
+$defaultViewsPath = Path::join(__DIR__, 'themes', 'default', 'views');
+$darkViewsPath    = Path::join(__DIR__, 'themes', 'dark', 'views');
+
+// Each theme gets: name, absolute path to its views, parent theme name (or null), asset base URL.
+$registry->add(
+    new ThemeConfig(
+        name: 'default',
+        path: $defaultViewsPath,
+        parent: null,
+        assetBaseUrl: '/themes/default/assets' // URL prefix for assets from this theme
+    )
+);
+
+$registry->add(
+    new ThemeConfig(
+        name: 'dark',
+        path: $darkViewsPath,
+        parent: 'default',            // dark inherits default if it can't find a template
+        assetBaseUrl: '/themes/dark/assets'  // URL prefix for dark assets
+    )
+);
+
+// 2. Create resolver
+$resolver = new ThemeResolver();
+
+// 3. Create builder with a default active theme (e.g. "default")
+$themeBuilder = new ThemeBuilder(
+    registry: $registry,
+    resolver: $resolver,
+    defaultTheme: 'default'
+);
+
+// (Optional) Switch theme at runtime, e.g. dark mode:
+$tenantWantsDark = true;
+if ($tenantWantsDark) {
+    $themeBuilder->useTheme('dark');
+}
+
+// 4. Create ViewConfig for Twig cache etc.
+$viewConfig = new ViewConfig(
+    viewsPath: $defaultViewsPath, // fallback path; View will mostly pull from ThemeBuilder anyway
+    cachePath: realpath(__DIR__ . '/storage/cache/twig') ?: (__DIR__ . '/storage/cache/twig'),
+    debug: true,
+    fragmentCache: null // or inject a PSR-16 cache implementation
+);
+
+// 5. Create the View and inject ThemeBuilder
+$view = new View(
+    config: $viewConfig,
+    extensions: [],
+    themeBuilder: $themeBuilder
+);
+
+$requestUri = (string) ($_SERVER['REQUEST_URI'] ?? 'theme.php');
+$requestPath = parse_url($requestUri, PHP_URL_PATH);
+$currentPath = is_string($requestPath) && $requestPath !== '' ? $requestPath : 'theme.php';
+$baseDirectory = rtrim(str_replace('\\', '/', dirname($currentPath)), '/.');
+$view->share('_theme_home_url', ($baseDirectory === '' ? '' : $baseDirectory) . '/switch-theme.php');
+$view->share('_theme_docs_url', ($baseDirectory === '' ? '' : $baseDirectory) . '/docs.php');
+
+// 6. Render a page from the active theme
+echo $view->render('home/index', [
+    'user' => [
+        'id'   => 7,
+        'name' => 'Skyler Quinn',
+    ],
+]);

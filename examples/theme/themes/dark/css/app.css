@@ -1,0 +1,7 @@
+body {
+    --theme-accent: #22d3ee;
+}
+
+.theme-accent {
+    color: var(--theme-accent);
+}

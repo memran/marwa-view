@@ -83,6 +83,49 @@ final class ViewPublicApiTest extends TestCase
         self::assertSame([], $this->filesInDirectory($cache));
     }
 
+    public function testAddNamespaceSupportsNamespacedTemplates(): void
+    {
+        $views = $this->makeTempDirectory('views-');
+        $cache = $this->makeTempDirectory('cache-');
+        $moduleViews = $this->makeTempDirectory('module-views-');
+
+        $this->writeFile($views . '/page.twig', '{{ view("@Blog/card", { title: "Namespaced" })|raw }}');
+        $this->writeFile($moduleViews . '/card.twig', '<article>{{ title }}</article>');
+
+        $view = new View(new ViewConfig($views, $cache, true));
+        $view->addNamespace('Blog', $moduleViews);
+
+        self::assertSame('<article>Namespaced</article>', $view->render('page'));
+    }
+
+    public function testStacksCanBePushedPrependedAndRendered(): void
+    {
+        $views = $this->makeTempDirectory('views-');
+        $cache = $this->makeTempDirectory('cache-');
+
+        $this->writeFile($views . '/layout.twig', <<<'TWIG'
+{% set pushed %}
+<script src="/app.js"></script>
+{% endset %}
+{% set prepended %}
+<meta name="robots" content="noindex">
+{% endset %}
+{{ push('head', pushed) }}
+{{ prepend('head', prepended) }}
+{{ stack('head', '')|raw }}
+TWIG);
+
+        $view = new View(new ViewConfig($views, $cache, true));
+
+        self::assertStringContainsString('<meta name="robots" content="noindex">', $view->render('layout'));
+        self::assertStringContainsString('<script src="/app.js"></script>', $view->render('layout'));
+
+        $view->pushToStack('footer', '<script src="/footer.js"></script>');
+        $view->prependToStack('footer', '<script src="/vendor.js"></script>');
+
+        self::assertSame("<script src=\"/vendor.js\"></script>\n<script src=\"/footer.js\"></script>", $view->renderStack('footer'));
+    }
+
     /**
      * @return list<string>
      */

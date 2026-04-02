@@ -9,16 +9,20 @@
 
 `Marwa\View` is a framework-agnostic view layer for PHP 8.2+ built on Twig. It gives application code a small public API, optional PSR-16 fragment caching, theme inheritance, and extension points without forcing the rest of the app to depend directly on Twig internals.
 
+Documentation is split into focused guides under [docs/README.md](/Users/memran/projects/php-projects/marwa-view/docs/README.md). Start there to browse tutorials, API references, themes, extensions, examples, and development notes.
+
 ## Features
 
 - Small public API centered on `View`, `ViewConfig`, and `ViewInterface`
 - Twig-powered rendering with strict variables and auto-reload in debug mode
 - Shared view data through `share()`
 - Nested partial rendering through `view()` inside templates
+- Namespaced views for modular template directories like `@Blog/post/index`
+- Layout stack helpers through `push()`, `prepend()`, and `stack()`
 - PSR-16 fragment caching through `fragment()`
 - Optional runtime theme switching with `ThemeBuilder`
 - Theme inheritance for templates and theme-specific asset URLs
-- Optional extensions for assets, URLs, text helpers, dates, and translations
+- Optional extensions for assets, URLs, text helpers, dates, translations, HTML attributes, JSON output, and money formatting
 - PHPUnit, PHPStan 2.x, PHP-CS-Fixer, Composer scripts, and GitHub Actions CI
 
 ## Requirements
@@ -37,6 +41,16 @@ For package development:
 ```bash
 composer install
 ```
+
+## Documentation
+
+- [Documentation Index](/Users/memran/projects/php-projects/marwa-view/docs/README.md)
+- [Tutorials](/Users/memran/projects/php-projects/marwa-view/docs/tutorials.md)
+- [API Reference](/Users/memran/projects/php-projects/marwa-view/docs/api.md)
+- [Extensions](/Users/memran/projects/php-projects/marwa-view/docs/extensions.md)
+- [Themes](/Users/memran/projects/php-projects/marwa-view/docs/themes.md)
+- [Examples](/Users/memran/projects/php-projects/marwa-view/docs/examples.md)
+- [Development](/Users/memran/projects/php-projects/marwa-view/docs/development.md)
 
 ## Tutorial
 
@@ -139,6 +153,10 @@ Public methods:
 - `display(string $template, array $data = []): void`
 - `share(string $name, mixed $value): void`
 - `clearCache(): void`
+- `addNamespace(string $namespace, string $path): void`
+- `pushToStack(string $stack, string $content): void`
+- `prependToStack(string $stack, string $content): void`
+- `renderStack(string $stack, string $glue = "\n"): string`
 - `fragment(string $key, int $ttl, callable|array $producer): string`
 - `addExtension(AbstractExtension $extension): void`
 - `getThemeBuilder(): ?ThemeBuilder`
@@ -194,6 +212,58 @@ $view->display('pages/about');
 {{ view('components/card', { title: 'Status', value: 'Healthy' })|raw }}
 ```
 
+### Namespaced views
+
+Register a module namespace:
+
+```php
+$config = new ViewConfig(
+    viewsPath: __DIR__ . '/views',
+    cachePath: __DIR__ . '/storage/views',
+    debug: true,
+    namespaces: [
+        'Blog' => __DIR__ . '/modules/Blog/views',
+    ],
+);
+```
+
+Render namespaced templates:
+
+```php
+echo $view->render('@Blog/post/show', ['post' => $post]);
+```
+
+From Twig:
+
+```twig
+{{ view('@Blog/teaser', { appName: appName })|raw }}
+```
+
+### Layout stacks
+
+From PHP:
+
+```php
+$view->pushToStack('scripts', '<script src="/app.js"></script>');
+$view->prependToStack('head', '<meta name="robots" content="noindex">');
+```
+
+From Twig:
+
+```twig
+{% set pageScript %}
+  <script src="/dashboard.js"></script>
+{% endset %}
+{{ push('scripts', pageScript) }}
+```
+
+Render a stack in the layout:
+
+```twig
+{{ stack('head')|raw }}
+{{ stack('scripts')|raw }}
+```
+
 ### Fragment caching
 
 From Twig:
@@ -228,12 +298,24 @@ The package ships with optional Twig extensions:
 - `TextExtension`
 - `DateExtension`
 - `TranslateExtension`
+- `HtmlExtension`
+- `JsonExtension`
+- `MoneyExtension`
+- `NumberExtension`
+- `MetaStackExtension`
+- `IconExtension`
 
 Example:
 
 ```php
 use Marwa\View\Extension\AssetExtension;
 use Marwa\View\Extension\DateExtension;
+use Marwa\View\Extension\HtmlExtension;
+use Marwa\View\Extension\IconExtension;
+use Marwa\View\Extension\JsonExtension;
+use Marwa\View\Extension\MetaStackExtension;
+use Marwa\View\Extension\MoneyExtension;
+use Marwa\View\Extension\NumberExtension;
 use Marwa\View\Extension\TextExtension;
 use Marwa\View\Extension\TranslateExtension;
 use Marwa\View\Extension\UrlExtension;
@@ -245,10 +327,41 @@ $view = new View($config, [
     new AssetExtension('/static', '1.0.0'),
     new TextExtension(),
     new DateExtension(),
-    new UrlExtension('https://example.com'),
+    new HtmlExtension(),
+    new JsonExtension(),
+    new MoneyExtension(),
+    new NumberExtension(),
+    new UrlExtension('https://demo.test'),
     new TranslateExtension($translator),
 ]);
+
+$view->addExtension(new MetaStackExtension($view));
+$view->addExtension(new IconExtension([
+    'spark' => '<svg viewBox="0 0 24 24"><path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6Z"/></svg>',
+]));
 ```
+
+Useful helpers from the new extensions:
+
+```twig
+<button {{ html_attrs({
+    type: 'button',
+    class: ['btn', 'btn-primary'],
+    disabled: isDisabled
+}) }}>
+    Save
+</button>
+
+{{ money(1250.5, 'USD') }}
+{{ json({ app: appName, locale: locale }) }}
+{{ json_script('page-state', { user: auth }) }}
+{{ compact_number(18420) }}
+{{ file_size(5368709120) }}
+{{ icon('spark', { class: 'h-4 w-4' }) }}
+{{ push_meta('description', 'Dashboard page') }}
+```
+
+`class_names()` accepts strings, flat string lists, or `{ className: condition }` maps. `html_attrs()` supports scalar attributes, boolean attributes, and `class` values built from the same shapes.
 
 ## Themes
 
@@ -293,8 +406,8 @@ return [
         'label' => 'Tenant A',
         'description' => 'Tenant-specific branding layered on top of the dark base theme.',
         'version' => '1.0.0',
-        'author' => 'Marwa Team',
-        'preview_image' => '/themes/tenantA/assets/images/logo-tenantA.svg',
+        'author' => 'Example Studio',
+        'preview_image' => '/themes/tenantA/images/logo-tenantA.svg',
         'tags' => ['tenant', 'green-accent'],
     ],
 ];
@@ -397,14 +510,53 @@ Twig usage:
 
 The repository includes runnable examples:
 
-- [examples/index.php](/Users/memran/projects/php-projects/marwa-view/examples/index.php): minimal rendering example
-- [examples/bootstrap.php](/Users/memran/projects/php-projects/marwa-view/examples/bootstrap.php): configured renderer with extensions
-- [examples/render-demo.php](/Users/memran/projects/php-projects/marwa-view/examples/render-demo.php): simple demo page
-- [examples/demo.php](/Users/memran/projects/php-projects/marwa-view/examples/demo.php): larger rendering demo
-- [examples/theme.php](/Users/memran/projects/php-projects/marwa-view/examples/theme.php): manual theme registry example
-- [examples/themeinit.php](/Users/memran/projects/php-projects/marwa-view/examples/themeinit.php): `ThemeBootstrap` example
-- [examples/switch-theme.php](/Users/memran/projects/php-projects/marwa-view/examples/switch-theme.php): admin preview/apply/revert workflow
-- [examples/admin-theme-preview.php](/Users/memran/projects/php-projects/marwa-view/examples/admin-theme-preview.php): alias entry point for the admin preview workflow
+- [examples/README.md](/Users/memran/projects/php-projects/marwa-view/examples/README.md): overview of the example structure
+- [examples/basic/index.php](/Users/memran/projects/php-projects/marwa-view/examples/basic/index.php): minimal rendering example
+- [examples/basic/bootstrap.php](/Users/memran/projects/php-projects/marwa-view/examples/basic/bootstrap.php): configured renderer with extensions, namespaces, and stacks
+- [examples/basic/render-demo.php](/Users/memran/projects/php-projects/marwa-view/examples/basic/render-demo.php): simple demo page
+- [examples/basic/demo.php](/Users/memran/projects/php-projects/marwa-view/examples/basic/demo.php): larger rendering demo
+- [examples/basic/modules/Blog/views/teaser.twig](/Users/memran/projects/php-projects/marwa-view/examples/basic/modules/Blog/views/teaser.twig): namespaced module view example
+- [examples/theme/theme.php](/Users/memran/projects/php-projects/marwa-view/examples/theme/theme.php): manual theme registry example
+- [examples/theme/themeinit.php](/Users/memran/projects/php-projects/marwa-view/examples/theme/themeinit.php): `ThemeBootstrap` example
+- [examples/theme/switch-theme.php](/Users/memran/projects/php-projects/marwa-view/examples/theme/switch-theme.php): admin preview/apply/revert workflow
+- [examples/theme/admin-theme-preview.php](/Users/memran/projects/php-projects/marwa-view/examples/theme/admin-theme-preview.php): alias entry point for the admin preview workflow
+
+## 1.0 Readiness Checklist
+
+- Implemented and tested small public API around `View` and `ViewConfig`
+- Implemented and tested namespaced views
+- Implemented and tested stack helpers for layout injection
+- Implemented and tested theming, preview mode, and manifest metadata
+- Added PHPUnit, PHPStan 2.x, PHP-CS-Fixer, Composer scripts, and CI
+- Locked Composer platform to PHP 8.2 for reproducible dependency resolution
+- Added public API regression coverage for documented package surface
+
+Recommended before tagging `1.0.0`:
+
+- publish a changelog policy and semantic versioning policy
+- add upgrade notes when public behavior changes
+- decide whether future stack/theme extensions belong in-core or in companion packages
+
+## Feature-Claim Audit
+
+Implemented and documented:
+
+- framework-facing `View` API
+- Twig-hidden rendering boundary
+- fragment caching
+- shared globals
+- namespaced views
+- stack system
+- translation helpers with pluralization
+- themes with inheritance, switching, preview mode, and manifest metadata
+
+Explicitly not claimed:
+
+- routing
+- controllers
+- HTTP/session abstraction
+- persistence of user or tenant theme preferences
+- framework-specific service container integration beyond examples
 
 ## Quality Tooling
 

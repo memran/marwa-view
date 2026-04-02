@@ -1,0 +1,42 @@
+{% extends "layout.twig" %}
+
+{% block title %}Home · Tenant A{% endblock %}
+
+{% block content %}
+    <div class="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+        <section class="rounded-[2rem] border border-emerald-500/20 bg-slate-900/70 p-8 shadow-2xl shadow-black/20">
+            <div class="flex items-center gap-4">
+                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-700 text-sm font-extrabold text-emerald-50 shadow-lg shadow-emerald-950/30 ring-2 ring-emerald-500/60">
+                    TA
+                </div>
+                <div>
+                    <div class="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300">Tenant Override</div>
+                    <h1 class="mt-2 text-4xl font-extrabold tracking-tight text-slate-100">
+                        Tenant A Dashboard
+                    </h1>
+                </div>
+            </div>
+
+            <p class="mt-5 text-lg leading-8 text-slate-300">
+                This tenant inherits the dark foundation but customizes its logo, accent color, and homepage content. It demonstrates how independent branding can sit on top of a shared theme chain.
+            </p>
+
+            <div class="mt-8 flex flex-wrap gap-3">
+                <button class="inline-flex items-center rounded-full bg-emerald-500 px-5 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-emerald-500/20">
+                    Tenant A Primary Action
+                </button>
+                <button class="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-slate-100">
+                    View Theme Metadata
+                </button>
+            </div>
+        </section>
+
+        <section class="rounded-[2rem] border border-white/10 bg-slate-900/70 p-8 shadow-xl shadow-black/20">
+            <h2 class="text-lg font-semibold text-slate-100">Debug Info</h2>
+            <div class="mt-4 rounded-3xl bg-black/30 px-5 py-4 text-xs font-mono leading-7 text-slate-200">
+                Theme: {{ _theme_name }}<br/>
+                Chain: {{ _theme_chain|join(' -> ') }}
+            </div>
+        </section>
+    </div>
+{% endblock %}

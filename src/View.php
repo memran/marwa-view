@@ -35,6 +35,14 @@ final class View implements ViewInterface
     private CacheInterface $fragmentCache;
     private ViewConfig $config;
     private ?ThemeBuilder $themeBuilder;
+    /**
+     * @var array<string, string>
+     */
+    private array $namespaces;
+    /**
+     * @var array<string, list<string>>
+     */
+    private array $stacks = [];
 
     /**
      * @param ViewConfig               $config
@@ -48,6 +56,7 @@ final class View implements ViewInterface
     ) {
         $this->config        = $config;
         $this->themeBuilder  = $themeBuilder;
+        $this->namespaces    = $config->getNamespaces();
 
         $loader = $this->createLoader($config, $themeBuilder);
 
@@ -124,6 +133,48 @@ final class View implements ViewInterface
         $this->sharedData[$name] = $value;
     }
 
+    public function addNamespace(string $namespace, string $path): void
+    {
+        if (preg_match('/^[A-Za-z][A-Za-z0-9_]*$/', $namespace) !== 1) {
+            throw new ViewException("Invalid view namespace '{$namespace}'.");
+        }
+
+        $resolvedPath = realpath($path);
+        if ($resolvedPath === false || !is_dir($resolvedPath)) {
+            throw new ViewException("View namespace path '{$path}' is not a directory.");
+        }
+
+        $this->namespaces[$namespace] = $resolvedPath;
+
+        $loader = $this->twig->getLoader();
+        if ($loader instanceof FilesystemLoader) {
+            $loader->addPath($resolvedPath, $namespace);
+        } elseif ($loader instanceof ThemeTwigLoader) {
+            $loader->addNamespace($namespace, $resolvedPath);
+        }
+    }
+
+    public function pushToStack(string $stack, string $content): void
+    {
+        $stack = $this->normalizeStackName($stack);
+        $this->stacks[$stack] ??= [];
+        $this->stacks[$stack][] = $content;
+    }
+
+    public function prependToStack(string $stack, string $content): void
+    {
+        $stack = $this->normalizeStackName($stack);
+        $this->stacks[$stack] ??= [];
+        array_unshift($this->stacks[$stack], $content);
+    }
+
+    public function renderStack(string $stack, string $glue = "\n"): string
+    {
+        $stack = $this->normalizeStackName($stack);
+
+        return implode($glue, $this->stacks[$stack] ?? []);
+    }
+
     /**
      * Clears PSR-16 fragment cache AND Twig compiled template cache directory.
      */
@@ -172,10 +223,15 @@ final class View implements ViewInterface
     private function createLoader(ViewConfig $config, ?ThemeBuilder $themeBuilder): LoaderInterface
     {
         if ($themeBuilder !== null) {
-            return new ThemeTwigLoader($themeBuilder);
+            return new ThemeTwigLoader($themeBuilder, $this->namespaces);
         }
 
-        return new FilesystemLoader($config->getViewsPath());
+        $loader = new FilesystemLoader($config->getViewsPath());
+        foreach ($this->namespaces as $namespace => $path) {
+            $loader->addPath($path, $namespace);
+        }
+
+        return $loader;
     }
 
     /**
@@ -303,9 +359,42 @@ final class View implements ViewInterface
                             return $builder?->asset($assetPath) ?? $assetPath;
                         }
                     ),
+                    new TwigFunction(
+                        'push',
+                        function (string $stack, string $content): string {
+                            $this->view->pushToStack($stack, $content);
+
+                            return '';
+                        }
+                    ),
+                    new TwigFunction(
+                        'prepend',
+                        function (string $stack, string $content): string {
+                            $this->view->prependToStack($stack, $content);
+
+                            return '';
+                        }
+                    ),
+                    new TwigFunction(
+                        'stack',
+                        function (string $stack, string $glue = "\n"): string {
+                            return $this->view->renderStack($stack, $glue);
+                        },
+                        ['is_safe' => ['html']]
+                    ),
                 ];
             }
         };
+    }
+
+    private function normalizeStackName(string $stack): string
+    {
+        $stack = trim($stack);
+        if ($stack === '' || str_contains($stack, "\0")) {
+            throw new ViewException('Stack name cannot be empty or contain null bytes.');
+        }
+
+        return $stack;
     }
 
     /**

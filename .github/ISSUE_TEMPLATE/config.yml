@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/memran/marwa-view/blob/main/docs/README.md
+    about: Start with the documentation index before opening a support request.
+  - name: Security Policy
+    url: https://github.com/memran/marwa-view/blob/main/SECURITY.md
+    about: Please do not report security issues in public issues.

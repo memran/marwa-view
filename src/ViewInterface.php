@@ -39,4 +39,24 @@ interface ViewInterface
      * Clear all cached views (if cache is enabled).
      */
     public function clearCache(): void;
+
+    /**
+     * Register a namespaced view directory, allowing templates like @Blog/post/index.
+     */
+    public function addNamespace(string $namespace, string $path): void;
+
+    /**
+     * Push content to a named stack for deferred layout rendering.
+     */
+    public function pushToStack(string $stack, string $content): void;
+
+    /**
+     * Prepend content to a named stack for deferred layout rendering.
+     */
+    public function prependToStack(string $stack, string $content): void;
+
+    /**
+     * Render a named stack as a string.
+     */
+    public function renderStack(string $stack, string $glue = "\n"): string;
 }
