@@ -58,6 +58,12 @@ echo $view->render('docs/index', [
             'items' => ['View', 'ViewConfig', 'ThemeBuilder', 'TranslatorInterface'],
         ],
         [
+            'title' => 'Module Views',
+            'summary' => 'Configure namespaced module view folders and render module-specific templates from controllers and templates.',
+            'path' => 'docs/modules.md',
+            'items' => ['ViewConfig namespaces', 'addNamespace()', '@Blog/post/show', 'Controller usage'],
+        ],
+        [
             'title' => 'Extensions',
             'summary' => 'Built-in extension helpers for HTML, JSON, money, numbers, icons, and metadata stacks.',
             'path' => 'docs/extensions.md',

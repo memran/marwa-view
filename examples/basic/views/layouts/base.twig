@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title>{% block title %}Untitled{% endblock %}</title>
     <meta name="csrf-token" content="{{ csrf }}">
+    {% block head %}{% endblock %}
     {{ stack('head')|raw }}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

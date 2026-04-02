@@ -8,10 +8,15 @@ use Marwa\View\Extension\AssetExtension;
 use Marwa\View\Extension\DateExtension;
 use Marwa\View\Extension\HtmlExtension;
 use Marwa\View\Extension\IconExtension;
+use Marwa\View\Extension\ImageExtension;
 use Marwa\View\Extension\JsonExtension;
+use Marwa\View\Extension\ListExtension;
 use Marwa\View\Extension\MetaStackExtension;
 use Marwa\View\Extension\MoneyExtension;
 use Marwa\View\Extension\NumberExtension;
+use Marwa\View\Extension\SeoExtension;
+use Marwa\View\Extension\StatusExtension;
+use Marwa\View\Extension\StringPresentationExtension;
 use Marwa\View\Extension\TextExtension;
 use Marwa\View\Extension\TranslateExtension;
 use Marwa\View\Extension\UrlExtension;
@@ -157,6 +162,63 @@ final class ExtensionPublicApiTest extends TestCase
         self::assertSame('<script src="/app.js" defer></script>', $view->renderStack('scripts'));
     }
 
+    public function testSeoExtensionPushesSeoTagsIntoHeadStack(): void
+    {
+        $view = new class () implements ViewInterface {
+            /** @var array<string, list<string>> */
+            public array $stacks = [];
+
+            public function render(string $template, array $data = []): string
+            {
+                return '';
+            }
+
+            public function display(string $template, array $data = []): void {}
+
+            public function share(string $name, mixed $value): void {}
+
+            public function clearCache(): void {}
+
+            public function addNamespace(string $namespace, string $path): void {}
+
+            public function pushToStack(string $stack, string $content): void
+            {
+                $this->stacks[$stack] ??= [];
+                $this->stacks[$stack][] = $content;
+            }
+
+            public function prependToStack(string $stack, string $content): void {}
+
+            public function renderStack(string $stack, string $glue = "\n"): string
+            {
+                return implode($glue, $this->stacks[$stack] ?? []);
+            }
+        };
+
+        $extension = new SeoExtension($view);
+        $metaTitle = $this->functionCallable($extension, 'meta_title');
+        $metaDescription = $this->functionCallable($extension, 'meta_description');
+        $canonicalTag = $this->functionCallable($extension, 'canonical_tag');
+        $robotsTag = $this->functionCallable($extension, 'robots_tag');
+        $ogTag = $this->functionCallable($extension, 'og_tag');
+
+        self::assertSame('', $metaTitle('Demo Page'));
+        self::assertSame('', $metaDescription('Page summary'));
+        self::assertSame('', $canonicalTag('https://demo.test/docs'));
+        self::assertSame('', $robotsTag('index,follow'));
+        self::assertSame('', $ogTag('og:type', 'website'));
+
+        self::assertSame(
+            '<meta property="og:title" content="Demo Page">' . "\n" .
+            '<meta name="description" content="Page summary">' . "\n" .
+            '<meta property="og:description" content="Page summary">' . "\n" .
+            '<link rel="canonical" href="https://demo.test/docs">' . "\n" .
+            '<meta name="robots" content="index,follow">' . "\n" .
+            '<meta property="og:type" content="website">',
+            $view->renderStack('head')
+        );
+    }
+
     public function testIconExtensionRendersConfiguredIconsWithAttributes(): void
     {
         $extension = new IconExtension([
@@ -169,6 +231,61 @@ final class ExtensionPublicApiTest extends TestCase
         self::assertSame(
             '<svg class="h-4 w-4" aria-hidden="true" viewBox="0 0 24 24"><path d="M1 1h22"/></svg>',
             $icon('spark', ['class' => 'h-4 w-4', 'aria-hidden' => 'true'])
+        );
+    }
+
+    public function testListExtensionFormatsHumanReadableLists(): void
+    {
+        $extension = new ListExtension();
+        $joinHuman = $this->functionCallable($extension, 'join_human');
+        $oxfordJoin = $this->functionCallable($extension, 'oxford_join');
+
+        self::assertSame('cache and themes', $joinHuman(['cache', 'themes']));
+        self::assertSame('cache, themes, and stacks', $oxfordJoin(['cache', 'themes', 'stacks']));
+    }
+
+    public function testImageExtensionBuildsImageAttributesAndSrcset(): void
+    {
+        $extension = new ImageExtension();
+        $imageAttrs = $this->functionCallable($extension, 'image_attrs');
+        $srcset = $this->functionCallable($extension, 'srcset');
+
+        self::assertSame(
+            '/images/panel.svg 1x, /images/panel@2x.svg 2x',
+            $srcset(['1x' => '/images/panel.svg', '2x' => '/images/panel@2x.svg'])
+        );
+        self::assertSame(
+            'src="/images/panel.svg" alt="Panel preview" loading="lazy"',
+            $imageAttrs('/images/panel.svg', 'Panel preview', ['loading' => 'lazy'])
+        );
+    }
+
+    public function testStringPresentationExtensionFormatsInitialsHeadlinesExcerptsAndLineBreaks(): void
+    {
+        $extension = new StringPresentationExtension();
+        $initials = $this->functionCallable($extension, 'initials');
+        $headline = $this->functionCallable($extension, 'headline');
+        $excerpt = $this->functionCallable($extension, 'excerpt');
+        $nl2brSafe = $this->functionCallable($extension, 'nl2br_safe');
+
+        self::assertSame('RH', $initials('Riley Harper'));
+        self::assertSame('Framework Style Templates', $headline('framework_style_templates'));
+        self::assertSame('This is a concise example...', $excerpt('This is a concise example of string presentation helpers in templates.', 28));
+        self::assertSame('line 1<br>' . "\n" . 'line 2', $nl2brSafe("line 1\nline 2"));
+    }
+
+    public function testStatusExtensionReturnsSemanticLabelsVariantsAndClasses(): void
+    {
+        $extension = new StatusExtension();
+        $label = $this->functionCallable($extension, 'status_label');
+        $variant = $this->functionCallable($extension, 'status_variant');
+        $classes = $this->functionCallable($extension, 'status_classes');
+
+        self::assertSame('Pending', $label('pending'));
+        self::assertSame('success', $variant('active'));
+        self::assertSame(
+            'rounded-full px-2.5 py-1 text-xs font-semibold bg-rose-500/10 text-rose-300',
+            $classes('failed')
         );
     }
 

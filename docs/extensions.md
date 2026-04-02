@@ -15,6 +15,11 @@
 - `NumberExtension`
 - `MetaStackExtension`
 - `IconExtension`
+- `SeoExtension`
+- `ListExtension`
+- `ImageExtension`
+- `StringPresentationExtension`
+- `StatusExtension`
 
 ## Registration Example
 
@@ -23,10 +28,15 @@ use Marwa\View\Extension\AssetExtension;
 use Marwa\View\Extension\DateExtension;
 use Marwa\View\Extension\HtmlExtension;
 use Marwa\View\Extension\IconExtension;
+use Marwa\View\Extension\ImageExtension;
 use Marwa\View\Extension\JsonExtension;
+use Marwa\View\Extension\ListExtension;
 use Marwa\View\Extension\MetaStackExtension;
 use Marwa\View\Extension\MoneyExtension;
 use Marwa\View\Extension\NumberExtension;
+use Marwa\View\Extension\SeoExtension;
+use Marwa\View\Extension\StatusExtension;
+use Marwa\View\Extension\StringPresentationExtension;
 use Marwa\View\Extension\TextExtension;
 use Marwa\View\Extension\TranslateExtension;
 use Marwa\View\Extension\UrlExtension;
@@ -39,14 +49,19 @@ $view = new View($config, [
     new TextExtension(),
     new DateExtension(),
     new HtmlExtension(),
+    new ImageExtension(),
     new JsonExtension(),
+    new ListExtension(),
     new MoneyExtension(),
     new NumberExtension(),
+    new StatusExtension(),
+    new StringPresentationExtension(),
     new UrlExtension('https://demo.test'),
     new TranslateExtension($translator),
 ]);
 
 $view->addExtension(new MetaStackExtension($view));
+$view->addExtension(new SeoExtension($view));
 $view->addExtension(new IconExtension([
     'spark' => '<svg viewBox="0 0 24 24"><path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6Z"/></svg>',
 ]));
@@ -79,10 +94,35 @@ $view->addExtension(new IconExtension([
 - `push_link_tag()`
 - `push_script_tag()`
 
+### SEO Helpers
+
+- `meta_title()`
+- `meta_description()`
+- `canonical_tag()`
+- `robots_tag()`
+- `og_tag()`
+
 ### Icons
 
 - `icon()`
 - `has_icon()`
+
+### List and Image Helpers
+
+- `join_human()`
+- `oxford_join()`
+- `image_attrs()`
+- `srcset()`
+
+### String and Status Helpers
+
+- `initials()`
+- `headline()`
+- `excerpt()`
+- `nl2br_safe()`
+- `status_label()`
+- `status_variant()`
+- `status_classes()`
 
 ## Guidance
 

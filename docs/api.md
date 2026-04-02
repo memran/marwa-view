@@ -34,6 +34,19 @@ Main rendering service.
 
 Stable contract for app code that only needs rendering and stack support.
 
+## Module View Resolution
+
+Module-specific templates are supported through view namespaces.
+
+Example:
+
+```php
+$view->addNamespace('Blog', __DIR__ . '/../modules/Blog/views');
+echo $view->render('@Blog/post/show', ['post' => $post]);
+```
+
+See [Module Views](./modules.md) for configuration, controller usage, and naming rules.
+
 ## Theme API
 
 - `ThemeConfig`

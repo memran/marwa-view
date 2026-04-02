@@ -15,10 +15,14 @@
 
 {% block title %}Full Demo | {{ appName }}{% endblock %}
 
-{% block body %}
-  {{ push_meta('description', 'Full Marwa\\View demo with stacks, namespaced views, icons, and formatting helpers.') }}
-  {{ push_property_meta('og:title', appName ~ ' demo') }}
+{% block head %}
+  {{ meta_description('Full Marwa\\View demo with stacks, namespaced views, icons, and formatting helpers.') }}
+  {{ meta_title(appName ~ ' demo') }}
+  {{ og_tag('og:type', 'website') }}
   {{ push_script_tag(url('/static/app.js'), { defer: true }) }}
+{% endblock %}
+
+{% block body %}
   {% set analyticsScript %}
     <script>
       window.demoAnalytics = { page: 'full-demo', app: '{{ appName|e('js') }}' };
@@ -70,7 +74,10 @@
       <div class="mt-8 grid gap-4 lg:grid-cols-[1.5fr_0.7fr]">
         <div class="rounded-3xl border border-white/10 bg-slate-950/50 p-5 text-sm leading-7 text-slate-300">
           Hello, <span class="font-semibold text-white">{{ user.name|default('Guest')|title }}</span>. You are inside <strong class="text-white">{{ appName }}</strong> and rendering through a stable API.
-          <div class="mt-3 rounded-2xl bg-white/5 px-4 py-3 font-mono text-xs text-slate-400">CSRF token: {{ csrf }}</div>
+          <div class="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-white/5 px-4 py-3 font-mono text-xs text-slate-400">
+            <span>CSRF token: {{ csrf }}</span>
+            <span class="rounded-full bg-white/10 px-2.5 py-1 font-sans text-[11px] font-semibold text-slate-200">{{ initials(user.name) }}</span>
+          </div>
         </div>
         <div class="rounded-3xl border border-white/10 bg-slate-950/50 p-5 text-sm leading-7 text-slate-300">
           <div>Account created: <span class="font-medium text-white">{{ user.created_at|date("Y-m-d H:i") }}</span></div>
@@ -125,11 +132,8 @@
                   <td class="px-4 py-3 text-slate-500">{{ loop.index }}</td>
                   <td class="px-4 py-3 font-medium">{{ client.name }}</td>
                   <td class="px-4 py-3">
-                    <span class="{{ class_names(
-                      'rounded-full px-2.5 py-1 text-xs font-semibold',
-                      client.active ? 'bg-emerald-500/10 text-emerald-300' : 'bg-slate-700/70 text-slate-300'
-                    ) }}">
-                      {{ client.active ? 'Active' : 'Inactive' }}
+                    <span class="{{ status_classes(client.active ? 'active' : 'inactive') }}">
+                      {{ status_label(client.active ? 'active' : 'inactive') }}
                     </span>
                   </td>
                   <td class="px-4 py-3 text-right font-mono text-slate-300">
@@ -166,6 +170,10 @@
             length  = {{ welcome|length }} chars<br>
             now     = {{ "now"|date("c") }}<br>
           </div>
+          <div class="mt-5 rounded-3xl border border-white/8 bg-white/5 p-4 text-sm leading-7 text-slate-300">
+            Headline: <strong class="text-white">{{ headline('framework_style_templates') }}</strong><br>
+            Excerpt: {{ excerpt('This block shows how string presentation helpers can keep display logic out of application services and controllers.', 84) }}
+          </div>
         </section>
       </div>
 
@@ -183,7 +191,7 @@
           <ul class="mt-4 space-y-3 text-sm leading-6 text-slate-300">
             <li>Stack content is injected into the shared layout head and scripts sections.</li>
             <li>Application code still renders through <code class="font-mono text-slate-200">$view->render()</code>.</li>
-            <li>Nested views and fragment caching stay available without leaking Twig into the application layer.</li>
+            <li>Nested views, fragment caching, and {{ join_human(featureTags) }} stay available without leaking Twig into the application layer.</li>
           </ul>
           <div class="mt-5 rounded-3xl bg-slate-950/50 p-4 text-xs text-slate-400">
             {{ json_script('demo-state', {

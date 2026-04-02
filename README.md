@@ -9,7 +9,7 @@
 
 `Marwa\View` is a framework-agnostic view layer for PHP 8.2+ built on Twig. It gives application code a small public API, optional PSR-16 fragment caching, theme inheritance, and extension points without forcing the rest of the app to depend directly on Twig internals.
 
-Documentation is split into focused guides under [docs/README.md](/Users/memran/projects/php-projects/marwa-view/docs/README.md). Start there to browse tutorials, API references, themes, extensions, examples, and development notes.
+Documentation is split into focused guides under [docs/README.md](docs/README.md). Start there to browse tutorials, API references, themes, extensions, examples, and development notes.
 
 ## Features
 
@@ -44,13 +44,14 @@ composer install
 
 ## Documentation
 
-- [Documentation Index](/Users/memran/projects/php-projects/marwa-view/docs/README.md)
-- [Tutorials](/Users/memran/projects/php-projects/marwa-view/docs/tutorials.md)
-- [API Reference](/Users/memran/projects/php-projects/marwa-view/docs/api.md)
-- [Extensions](/Users/memran/projects/php-projects/marwa-view/docs/extensions.md)
-- [Themes](/Users/memran/projects/php-projects/marwa-view/docs/themes.md)
-- [Examples](/Users/memran/projects/php-projects/marwa-view/docs/examples.md)
-- [Development](/Users/memran/projects/php-projects/marwa-view/docs/development.md)
+- [Documentation Index](docs/README.md)
+- [Tutorials](docs/tutorials.md)
+- [API Reference](docs/api.md)
+- [Module Views](docs/modules.md)
+- [Extensions](docs/extensions.md)
+- [Themes](docs/themes.md)
+- [Examples](docs/examples.md)
+- [Development](docs/development.md)
 
 ## Tutorial
 
@@ -239,6 +240,8 @@ From Twig:
 {{ view('@Blog/teaser', { appName: appName })|raw }}
 ```
 
+For full module-specific template setup and controller examples, see [docs/modules.md](docs/modules.md).
+
 ### Layout stacks
 
 From PHP:
@@ -304,6 +307,11 @@ The package ships with optional Twig extensions:
 - `NumberExtension`
 - `MetaStackExtension`
 - `IconExtension`
+- `SeoExtension`
+- `ListExtension`
+- `ImageExtension`
+- `StringPresentationExtension`
+- `StatusExtension`
 
 Example:
 
@@ -312,10 +320,15 @@ use Marwa\View\Extension\AssetExtension;
 use Marwa\View\Extension\DateExtension;
 use Marwa\View\Extension\HtmlExtension;
 use Marwa\View\Extension\IconExtension;
+use Marwa\View\Extension\ImageExtension;
 use Marwa\View\Extension\JsonExtension;
+use Marwa\View\Extension\ListExtension;
 use Marwa\View\Extension\MetaStackExtension;
 use Marwa\View\Extension\MoneyExtension;
 use Marwa\View\Extension\NumberExtension;
+use Marwa\View\Extension\SeoExtension;
+use Marwa\View\Extension\StatusExtension;
+use Marwa\View\Extension\StringPresentationExtension;
 use Marwa\View\Extension\TextExtension;
 use Marwa\View\Extension\TranslateExtension;
 use Marwa\View\Extension\UrlExtension;
@@ -328,14 +341,19 @@ $view = new View($config, [
     new TextExtension(),
     new DateExtension(),
     new HtmlExtension(),
+    new ImageExtension(),
     new JsonExtension(),
+    new ListExtension(),
     new MoneyExtension(),
     new NumberExtension(),
+    new StatusExtension(),
+    new StringPresentationExtension(),
     new UrlExtension('https://demo.test'),
     new TranslateExtension($translator),
 ]);
 
 $view->addExtension(new MetaStackExtension($view));
+$view->addExtension(new SeoExtension($view));
 $view->addExtension(new IconExtension([
     'spark' => '<svg viewBox="0 0 24 24"><path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6Z"/></svg>',
 ]));
@@ -359,6 +377,13 @@ Useful helpers from the new extensions:
 {{ file_size(5368709120) }}
 {{ icon('spark', { class: 'h-4 w-4' }) }}
 {{ push_meta('description', 'Dashboard page') }}
+{{ meta_description('Dashboard page') }}
+{{ oxford_join(['themes', 'stacks', 'fragments']) }}
+<img {{ image_attrs('/images/panel.svg', 'Panel preview', { loading: 'lazy' }) }}>
+{{ initials('Riley Harper') }}
+{{ headline('framework_style_templates') }}
+{{ status_label('pending') }}
+{{ status_classes('active') }}
 ```
 
 `class_names()` accepts strings, flat string lists, or `{ className: condition }` maps. `html_attrs()` supports scalar attributes, boolean attributes, and `class` values built from the same shapes.
@@ -510,16 +535,16 @@ Twig usage:
 
 The repository includes runnable examples:
 
-- [examples/README.md](/Users/memran/projects/php-projects/marwa-view/examples/README.md): overview of the example structure
-- [examples/basic/index.php](/Users/memran/projects/php-projects/marwa-view/examples/basic/index.php): minimal rendering example
-- [examples/basic/bootstrap.php](/Users/memran/projects/php-projects/marwa-view/examples/basic/bootstrap.php): configured renderer with extensions, namespaces, and stacks
-- [examples/basic/render-demo.php](/Users/memran/projects/php-projects/marwa-view/examples/basic/render-demo.php): simple demo page
-- [examples/basic/demo.php](/Users/memran/projects/php-projects/marwa-view/examples/basic/demo.php): larger rendering demo
-- [examples/basic/modules/Blog/views/teaser.twig](/Users/memran/projects/php-projects/marwa-view/examples/basic/modules/Blog/views/teaser.twig): namespaced module view example
-- [examples/theme/theme.php](/Users/memran/projects/php-projects/marwa-view/examples/theme/theme.php): manual theme registry example
-- [examples/theme/themeinit.php](/Users/memran/projects/php-projects/marwa-view/examples/theme/themeinit.php): `ThemeBootstrap` example
-- [examples/theme/switch-theme.php](/Users/memran/projects/php-projects/marwa-view/examples/theme/switch-theme.php): admin preview/apply/revert workflow
-- [examples/theme/admin-theme-preview.php](/Users/memran/projects/php-projects/marwa-view/examples/theme/admin-theme-preview.php): alias entry point for the admin preview workflow
+- [examples/README.md](examples/README.md): overview of the example structure
+- [examples/basic/index.php](examples/basic/index.php): minimal rendering example
+- [examples/basic/bootstrap.php](examples/basic/bootstrap.php): configured renderer with extensions, namespaces, and stacks
+- [examples/basic/render-demo.php](examples/basic/render-demo.php): simple demo page
+- [examples/basic/demo.php](examples/basic/demo.php): larger rendering demo
+- [examples/basic/modules/Blog/views/teaser.twig](examples/basic/modules/Blog/views/teaser.twig): namespaced module view example
+- [examples/theme/theme.php](examples/theme/theme.php): manual theme registry example
+- [examples/theme/themeinit.php](examples/theme/themeinit.php): `ThemeBootstrap` example
+- [examples/theme/switch-theme.php](examples/theme/switch-theme.php): admin preview/apply/revert workflow
+- [examples/theme/admin-theme-preview.php](examples/theme/admin-theme-preview.php): alias entry point for the admin preview workflow
 
 ## 1.0 Readiness Checklist
 
@@ -571,10 +596,10 @@ Available Composer scripts:
 
 Configuration files:
 
-- [phpunit.xml.dist](/Users/memran/projects/php-projects/marwa-view/phpunit.xml.dist)
-- [phpstan.neon.dist](/Users/memran/projects/php-projects/marwa-view/phpstan.neon.dist)
-- [.php-cs-fixer.dist.php](/Users/memran/projects/php-projects/marwa-view/.php-cs-fixer.dist.php)
-- [.github/workflows/ci.yml](/Users/memran/projects/php-projects/marwa-view/.github/workflows/ci.yml)
+- [phpunit.xml.dist](phpunit.xml.dist)
+- [phpstan.neon.dist](phpstan.neon.dist)
+- [.php-cs-fixer.dist.php](.php-cs-fixer.dist.php)
+- [.github/workflows/ci.yml](.github/workflows/ci.yml)
 
 ## Production Notes
 

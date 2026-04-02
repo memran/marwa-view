@@ -64,6 +64,10 @@ $config = new ViewConfig(
 echo $view->render('@Blog/post/show', ['post' => $post]);
 ```
 
+This is the feature to use when each module owns its own `views/` directory.
+
+See the full guide in [Module Views](./modules.md).
+
 ## Layout Stacks
 
 ```php
