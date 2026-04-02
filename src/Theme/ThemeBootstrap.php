@@ -90,7 +90,8 @@ final class ThemeBootstrap
                 name: $themeName,
                 path: $viewsPath,
                 parent: $parentName !== '' ? $parentName : null,
-                assetBaseUrl: rtrim($assetsBase, '/')
+                assetBaseUrl: rtrim($assetsBase, '/'),
+                metadata: ThemeMetadata::fromManifest($themeName, $manifest)
             );
 
             $registry->add($config);

@@ -19,14 +19,10 @@ namespace Marwa\View\Theme;
  */
 final class ThemeBuilder
 {
-    /** @var ThemeRegistry */
     private ThemeRegistry $registry;
-
-    /** @var ThemeResolver */
     private ThemeResolver $resolver;
-
-    /** @var string */
-    private string $activeTheme;
+    private string $selectedTheme;
+    private ?string $previewTheme = null;
 
     /**
      * @param ThemeRegistry $registry
@@ -48,17 +44,26 @@ final class ThemeBuilder
             );
         }
 
-        $this->registry    = $registry;
-        $this->resolver    = $resolver;
-        $this->activeTheme = $defaultTheme;
+        $this->registry = $registry;
+        $this->resolver = $resolver;
+        $this->selectedTheme = $defaultTheme;
     }
 
     /**
-     * Get current active theme name.
+     * Get the theme currently used for rendering.
+     * When preview mode is active this returns the preview theme.
      */
     public function current(): string
     {
-        return $this->activeTheme;
+        return $this->previewTheme ?? $this->selectedTheme;
+    }
+
+    /**
+     * Get the persisted/selected theme name without preview overrides.
+     */
+    public function selected(): string
+    {
+        return $this->selectedTheme;
     }
 
     /**
@@ -68,15 +73,59 @@ final class ThemeBuilder
      */
     public function useTheme(string $themeName): void
     {
-        if ($themeName === '') {
-            throw new \InvalidArgumentException('Theme name cannot be empty');
+        $this->selectedTheme = $this->assertKnownTheme($themeName);
+        $this->previewTheme = null;
+    }
+
+    /**
+     * Alias for useTheme() when the caller wants explicit "apply" semantics.
+     *
+     * @throws ThemeNotFoundException
+     */
+    public function applyTheme(string $themeName): void
+    {
+        $this->useTheme($themeName);
+    }
+
+    /**
+     * Enable preview mode without changing the selected theme.
+     *
+     * @throws ThemeNotFoundException
+     */
+    public function previewTheme(string $themeName): void
+    {
+        $themeName = $this->assertKnownTheme($themeName);
+        if ($themeName === $this->selectedTheme) {
+            $this->previewTheme = null;
+
+            return;
         }
 
-        if (!$this->registry->has($themeName)) {
-            throw new ThemeNotFoundException("Theme '{$themeName}' is not registered");
-        }
+        $this->previewTheme = $themeName;
+    }
 
-        $this->activeTheme = $themeName;
+    /**
+     * Exit preview mode and render with the selected theme again.
+     */
+    public function clearPreview(): void
+    {
+        $this->previewTheme = null;
+    }
+
+    /**
+     * Whether the builder is temporarily rendering a preview theme.
+     */
+    public function isPreviewing(): bool
+    {
+        return $this->previewTheme !== null;
+    }
+
+    /**
+     * Return the preview theme name or null when preview mode is disabled.
+     */
+    public function previewingTheme(): ?string
+    {
+        return $this->previewTheme;
     }
 
     /**
@@ -90,7 +139,7 @@ final class ThemeBuilder
     {
         return $this->resolver->resolveTemplate(
             $this->registry,
-            $this->activeTheme,
+            $this->current(),
             $relativeTemplatePath
         );
     }
@@ -105,7 +154,7 @@ final class ThemeBuilder
     {
         return $this->resolver->buildAssetUrl(
             $this->registry,
-            $this->activeTheme,
+            $this->current(),
             $relativeAssetPath
         );
     }
@@ -120,8 +169,18 @@ final class ThemeBuilder
     {
         return $this->resolver->chain(
             $this->registry,
-            $this->activeTheme
+            $this->current()
         );
+    }
+
+    public function currentConfig(): ThemeConfig
+    {
+        return $this->registry->get($this->current());
+    }
+
+    public function selectedConfig(): ThemeConfig
+    {
+        return $this->registry->get($this->selectedTheme);
     }
 
     /**
@@ -130,5 +189,51 @@ final class ThemeBuilder
     public function registry(): ThemeRegistry
     {
         return $this->registry;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function themes(): array
+    {
+        return $this->registry->names();
+    }
+
+    /**
+     * @return list<array{
+     *     name: string,
+     *     path: string,
+     *     parent: string|null,
+     *     asset_base_url: string,
+     *     metadata: array{
+     *         label: string,
+     *         description: string|null,
+     *         version: string|null,
+     *         author: string|null,
+     *         preview_image: string|null,
+     *         tags: list<string>
+     *     }
+     * }>
+     */
+    public function catalog(): array
+    {
+        return $this->registry->catalog();
+    }
+
+    /**
+     * @throws ThemeNotFoundException
+     */
+    private function assertKnownTheme(string $themeName): string
+    {
+        $themeName = trim($themeName);
+        if ($themeName === '') {
+            throw new \InvalidArgumentException('Theme name cannot be empty');
+        }
+
+        if (!$this->registry->has($themeName)) {
+            throw new ThemeNotFoundException("Theme '{$themeName}' is not registered");
+        }
+
+        return $themeName;
     }
 }

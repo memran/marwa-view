@@ -12,6 +12,11 @@ $themeBuilder = ThemeBootstrap::initFromDirectory(
     defaultTheme: 'default'
 );
 
+// Optional admin preview flow:
+// $themeBuilder->previewTheme('dark');
+// $themeBuilder->applyTheme('dark');
+// $themeBuilder->clearPreview();
+
 // 2. Build ViewConfig like before
 $viewConfig = new ViewConfig(
     viewsPath: '/var/www/app/views',   // legacy fallback, still used if no theme

@@ -15,18 +15,21 @@ final class ThemeConfig
     private string $path;
     private ?string $parent;
     private string $assetBaseUrl;
+    private ThemeMetadata $metadata;
 
     /**
      * @param string      $name          Theme name (unique key, e.g. "default")
      * @param string      $path          Absolute path to theme directory
      * @param string|null $parent        Parent theme name or null
      * @param string      $assetBaseUrl  Public asset base URL (no trailing slash)
+     * @param ThemeMetadata|null $metadata Optional theme metadata for admin UIs and previews
      */
     public function __construct(
         string $name,
         string $path,
         ?string $parent,
-        string $assetBaseUrl
+        string $assetBaseUrl,
+        ?ThemeMetadata $metadata = null,
     ) {
         $name = trim($name);
         if ($name === '') {
@@ -60,6 +63,7 @@ final class ThemeConfig
         $this->path         = rtrim($realPath, DIRECTORY_SEPARATOR);
         $this->parent       = $parent;
         $this->assetBaseUrl = rtrim($assetBaseUrl, '/');
+        $this->metadata     = $metadata ?? new ThemeMetadata($name);
     }
 
     public function name(): string
@@ -80,5 +84,37 @@ final class ThemeConfig
     public function assetBaseUrl(): string
     {
         return $this->assetBaseUrl;
+    }
+
+    public function metadata(): ThemeMetadata
+    {
+        return $this->metadata;
+    }
+
+    /**
+     * @return array{
+     *     name: string,
+     *     path: string,
+     *     parent: string|null,
+     *     asset_base_url: string,
+     *     metadata: array{
+     *         label: string,
+     *         description: string|null,
+     *         version: string|null,
+     *         author: string|null,
+     *         preview_image: string|null,
+     *         tags: list<string>
+     *     }
+     * }
+     */
+    public function toArray(): array
+    {
+        return [
+            'name' => $this->name,
+            'path' => $this->path,
+            'parent' => $this->parent,
+            'asset_base_url' => $this->assetBaseUrl,
+            'metadata' => $this->metadata->toArray(),
+        ];
     }
 }

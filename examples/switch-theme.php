@@ -28,24 +28,31 @@ $currentUser = [
 ];
 
 // inside request handling:
-// if user submitted theme switcher form:
-if (
-    $_SERVER['REQUEST_METHOD'] === 'POST'
-    && ($_POST['theme_name'] ?? '') !== ''
-) {
+// support both "preview" and "apply" flows from the same form.
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = (string) ($_POST['theme_action'] ?? 'apply');
+    $requested = (string) ($_POST['theme_name'] ?? '');
 
-    $requested = (string)$_POST['theme_name'];
-
-    // this is your "public api where i will supply only theme name"
-    // If the theme doesn't exist, ThemeBuilder will throw ThemeNotFoundException.
-    $themeBuilder->useTheme($requested);
-
-    // persist to session/cookie to remember selection per user, etc.
-    $_SESSION['theme_name'] = $requested;
+    if ($action === 'clear-preview') {
+        $themeBuilder->clearPreview();
+        unset($_SESSION['theme_preview']);
+    } elseif ($requested !== '') {
+        if ($action === 'preview') {
+            $themeBuilder->previewTheme($requested);
+            $_SESSION['theme_preview'] = $themeBuilder->previewingTheme();
+        } else {
+            $themeBuilder->applyTheme($requested);
+            $_SESSION['theme_name'] = $themeBuilder->selected();
+            unset($_SESSION['theme_preview']);
+        }
+    }
 } else {
-    // load previous theme from session if available
     if (!empty($_SESSION['theme_name'])) {
         $themeBuilder->useTheme((string) $_SESSION['theme_name']);
+    }
+
+    if (!empty($_SESSION['theme_preview'])) {
+        $themeBuilder->previewTheme((string) $_SESSION['theme_preview']);
     }
 }
 

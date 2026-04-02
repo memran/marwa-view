@@ -54,4 +54,36 @@ final class ThemeRegistry
     {
         return $this->themes;
     }
+
+    /**
+     * @return list<string>
+     */
+    public function names(): array
+    {
+        return array_keys($this->themes);
+    }
+
+    /**
+     * @return list<array{
+     *     name: string,
+     *     path: string,
+     *     parent: string|null,
+     *     asset_base_url: string,
+     *     metadata: array{
+     *         label: string,
+     *         description: string|null,
+     *         version: string|null,
+     *         author: string|null,
+     *         preview_image: string|null,
+     *         tags: list<string>
+     *     }
+     * }>
+     */
+    public function catalog(): array
+    {
+        return array_values(array_map(
+            static fn (ThemeConfig $theme): array => $theme->toArray(),
+            $this->themes
+        ));
+    }
 }

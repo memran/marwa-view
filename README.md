@@ -287,8 +287,25 @@ return [
     'name' => 'tenantA',
     'parent' => 'dark',
     'assets_url' => '/themes/tenantA',
+    'meta' => [
+        'label' => 'Tenant A',
+        'description' => 'Tenant-specific branding layered on top of the dark base theme.',
+        'version' => '1.0.0',
+        'author' => 'Marwa Team',
+        'preview_image' => '/themes/tenantA/assets/images/logo-tenantA.svg',
+        'tags' => ['tenant', 'green-accent'],
+    ],
 ];
 ```
+
+Supported metadata keys:
+
+- `label`
+- `description`
+- `version`
+- `author`
+- `preview_image`
+- `tags`
 
 ### Bootstrap themes from a directory
 
@@ -322,6 +339,13 @@ Available globals:
 
 - `_theme_name`
 - `_theme_chain`
+- `_theme_meta`
+- `_theme_selected`
+- `_theme_selected_meta`
+- `_theme_previewing`
+- `_theme_preview`
+- `_theme_available`
+- `_theme_catalog`
 
 Helper function:
 
@@ -377,7 +401,8 @@ The repository includes runnable examples:
 - [examples/demo.php](/Users/memran/projects/php-projects/marwa-view/examples/demo.php): larger rendering demo
 - [examples/theme.php](/Users/memran/projects/php-projects/marwa-view/examples/theme.php): manual theme registry example
 - [examples/themeinit.php](/Users/memran/projects/php-projects/marwa-view/examples/themeinit.php): `ThemeBootstrap` example
-- [examples/switch-theme.php](/Users/memran/projects/php-projects/marwa-view/examples/switch-theme.php): runtime theme switch example
+- [examples/switch-theme.php](/Users/memran/projects/php-projects/marwa-view/examples/switch-theme.php): admin preview/apply/revert workflow
+- [examples/admin-theme-preview.php](/Users/memran/projects/php-projects/marwa-view/examples/admin-theme-preview.php): alias entry point for the admin preview workflow
 
 ## Quality Tooling
 

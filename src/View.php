@@ -187,7 +187,14 @@ final class View implements ViewInterface
 
         if ($this->themeBuilder !== null) {
             $context['_theme_name'] = $this->themeBuilder->current();
+            $context['_theme_selected'] = $this->themeBuilder->selected();
             $context['_theme_chain'] = $this->themeBuilder->chain();
+            $context['_theme_previewing'] = $this->themeBuilder->isPreviewing();
+            $context['_theme_preview'] = $this->themeBuilder->previewingTheme();
+            $context['_theme_available'] = $this->themeBuilder->themes();
+            $context['_theme_meta'] = $this->themeBuilder->currentConfig()->metadata()->toArray();
+            $context['_theme_selected_meta'] = $this->themeBuilder->selectedConfig()->metadata()->toArray();
+            $context['_theme_catalog'] = $this->themeBuilder->catalog();
         }
 
         return $context;
