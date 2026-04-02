@@ -7,7 +7,7 @@ declare(strict_types=1);
 // -----------------------------------------------------------------------------
 require_once __DIR__ . '/../../vendor/autoload.php';
 
-use Marwa\View\Extension\{AssetExtension, DateExtension, HtmlExtension, IconExtension, ImageExtension, JsonExtension, ListExtension, MetaStackExtension, MoneyExtension, NumberExtension, SeoExtension, StatusExtension, StringPresentationExtension, TextExtension, UrlExtension};
+use Marwa\View\Extension\{AlpineExtension, AssetExtension, DateExtension, HtmlExtension, IconExtension, ImageExtension, JsonExtension, ListExtension, MetaStackExtension, MoneyExtension, NumberExtension, SeoExtension, StatusExtension, StringPresentationExtension, TextExtension, UrlExtension};
 use Marwa\View\Extension\TranslateExtension;
 use Marwa\View\Translate\ArrayTranslator;
 use Marwa\View\View;
@@ -42,6 +42,7 @@ $view = new View($config, [
     new TextExtension(),
     new DateExtension(),
     new HtmlExtension(),
+    new AlpineExtension(),
     new ImageExtension(),
     new NumberExtension(),
     new JsonExtension(),

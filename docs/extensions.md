@@ -10,6 +10,7 @@
 - `DateExtension`
 - `TranslateExtension`
 - `HtmlExtension`
+- `AlpineExtension`
 - `JsonExtension`
 - `MoneyExtension`
 - `NumberExtension`
@@ -24,6 +25,7 @@
 ## Registration Example
 
 ```php
+use Marwa\View\Extension\AlpineExtension;
 use Marwa\View\Extension\AssetExtension;
 use Marwa\View\Extension\DateExtension;
 use Marwa\View\Extension\HtmlExtension;
@@ -46,6 +48,7 @@ $translator = new ArrayTranslator('en', __DIR__ . '/../lang');
 
 $view = new View($config, [
     new AssetExtension('/static', '1.0.0'),
+    new AlpineExtension(),
     new TextExtension(),
     new DateExtension(),
     new HtmlExtension(),
@@ -73,6 +76,44 @@ $view->addExtension(new IconExtension([
 
 - `class_names()`
 - `html_attrs()`
+- `ui()`
+
+### Alpine Bridge
+
+`AlpineExtension` exposes a `ui()` helper for Alpine.js directive attributes.
+
+Twig usage:
+
+```twig
+<div {{ ui().data({ open: false }) }}>
+  <button {{ ui().click('open = !open') }}>Toggle</button>
+  <div {{ ui().show('open') }} {{ ui().cloak() }}>Hello</div>
+</div>
+```
+
+PHP-first usage:
+
+```php
+<div <?= ui()->data(['open' => false]) ?>>
+    <button <?= ui()->click('open = !open') ?>>Toggle</button>
+    <div <?= ui()->show('open') ?> <?= ui()->cloak() ?>>Hello</div>
+</div>
+```
+
+Common methods:
+
+- `data()`
+- `click()`
+- `show()`
+- `text()`
+- `html()`
+- `model()`
+- `bind()`
+- `on()`
+- `init()`
+- `ref()`
+- `transition()`
+- `cloak()`
 
 ### JSON
 

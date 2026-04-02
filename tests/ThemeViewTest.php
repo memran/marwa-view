@@ -155,4 +155,86 @@ PHP);
 
         self::assertSame('<nav>Control Panel</nav>', $view->render('home/index'));
     }
+
+    public function testThemeModePrefersThemedModuleOverrideAndItCanExtendThemeLayout(): void
+    {
+        $themes = $this->makeTempDirectory('themes-');
+        $cache = $this->makeTempDirectory('cache-');
+        $moduleViews = $this->makeTempDirectory('module-views-');
+
+        $this->writeFile($themes . '/default/manifest.php', <<<'PHP'
+<?php
+return [
+    'name' => 'default',
+    'assets_url' => '/themes/default',
+];
+PHP);
+        $this->writeFile($themes . '/default/views/layout.twig', 'Layout:{% block content %}{% endblock %}');
+        $this->writeFile($themes . '/default/views/home/index.twig', '{{ view("@Blog/post/show", { post: { title: "Release notes" } })|raw }}');
+
+        $this->writeFile($themes . '/tenantA/manifest.php', <<<'PHP'
+<?php
+return [
+    'name' => 'tenantA',
+    'parent' => 'default',
+    'assets_url' => '/themes/tenantA',
+];
+PHP);
+        $this->writeFile(
+            $themes . '/tenantA/views/modules/Blog/post/show.twig',
+            '{% extends "layout.twig" %}{% block content %}Theme override {{ post.title }}{% endblock %}'
+        );
+
+        $this->writeFile($moduleViews . '/post/show.twig', 'Module fallback {{ post.title }}');
+
+        $themeBuilder = ThemeBootstrap::initFromDirectory($themes, 'default');
+        $themeBuilder->useTheme('tenantA');
+
+        $view = new View(
+            new ViewConfig($themes . '/default/views', $cache, true, null, ['Blog' => $moduleViews]),
+            [],
+            $themeBuilder
+        );
+
+        self::assertSame('Layout:Theme override Release notes', $view->render('home/index'));
+    }
+
+    public function testThemeModeFallsBackToOriginalNamespacedModuleTemplateWhenNoOverrideExists(): void
+    {
+        $themes = $this->makeTempDirectory('themes-');
+        $cache = $this->makeTempDirectory('cache-');
+        $moduleViews = $this->makeTempDirectory('module-views-');
+
+        $this->writeFile($themes . '/default/manifest.php', <<<'PHP'
+<?php
+return [
+    'name' => 'default',
+    'assets_url' => '/themes/default',
+];
+PHP);
+        $this->writeFile($themes . '/default/views/home/index.twig', '{{ view("@Blog/post/show", { post: { title: "Fallback" } })|raw }}');
+
+        $this->writeFile($themes . '/dark/manifest.php', <<<'PHP'
+<?php
+return [
+    'name' => 'dark',
+    'parent' => 'default',
+    'assets_url' => '/themes/dark',
+];
+PHP);
+        $this->writeFile($themes . '/dark/views/.gitkeep', '');
+
+        $this->writeFile($moduleViews . '/post/show.twig', 'Module fallback {{ post.title }}');
+
+        $themeBuilder = ThemeBootstrap::initFromDirectory($themes, 'default');
+        $themeBuilder->useTheme('dark');
+
+        $view = new View(
+            new ViewConfig($themes . '/default/views', $cache, true, null, ['Blog' => $moduleViews]),
+            [],
+            $themeBuilder
+        );
+
+        self::assertSame('Module fallback Fallback', $view->render('home/index'));
+    }
 }

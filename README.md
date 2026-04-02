@@ -22,7 +22,7 @@ Documentation is split into focused guides under [docs/README.md](docs/README.md
 - PSR-16 fragment caching through `fragment()`
 - Optional runtime theme switching with `ThemeBuilder`
 - Theme inheritance for templates and theme-specific asset URLs
-- Optional extensions for assets, URLs, text helpers, dates, translations, HTML attributes, JSON output, and money formatting
+- Optional extensions for assets, URLs, text helpers, dates, translations, HTML attributes, Alpine.js directives, JSON output, and money formatting
 - PHPUnit, PHPStan 2.x, PHP-CS-Fixer, Composer scripts, and GitHub Actions CI
 
 ## Requirements
@@ -302,6 +302,7 @@ The package ships with optional Twig extensions:
 - `DateExtension`
 - `TranslateExtension`
 - `HtmlExtension`
+- `AlpineExtension`
 - `JsonExtension`
 - `MoneyExtension`
 - `NumberExtension`
@@ -316,6 +317,7 @@ The package ships with optional Twig extensions:
 Example:
 
 ```php
+use Marwa\View\Extension\AlpineExtension;
 use Marwa\View\Extension\AssetExtension;
 use Marwa\View\Extension\DateExtension;
 use Marwa\View\Extension\HtmlExtension;
@@ -338,6 +340,7 @@ $translator = new ArrayTranslator('en', __DIR__ . '/lang');
 
 $view = new View($config, [
     new AssetExtension('/static', '1.0.0'),
+    new AlpineExtension(),
     new TextExtension(),
     new DateExtension(),
     new HtmlExtension(),
@@ -362,6 +365,10 @@ $view->addExtension(new IconExtension([
 Useful helpers from the new extensions:
 
 ```twig
+<div {{ ui().data({ open: false }) }}>
+  <button {{ ui().click('open = !open') }}>Toggle</button>
+</div>
+
 <button {{ html_attrs({
     type: 'button',
     class: ['btn', 'btn-primary'],
@@ -387,6 +394,7 @@ Useful helpers from the new extensions:
 ```
 
 `class_names()` accepts strings, flat string lists, or `{ className: condition }` maps. `html_attrs()` supports scalar attributes, boolean attributes, and `class` values built from the same shapes.
+`ui()` exposes the optional Alpine bridge so templates can render `x-data`, `x-on:*`, `x-show`, `x-bind:*`, and related directives without handwritten attribute strings.
 
 ## Themes
 

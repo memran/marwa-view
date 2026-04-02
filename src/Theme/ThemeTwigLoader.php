@@ -14,6 +14,8 @@ use Twig\Source;
  */
 final class ThemeTwigLoader implements LoaderInterface
 {
+    private const MODULE_OVERRIDE_DIRECTORY = 'modules';
+
     /**
      * @param array<string, string> $namespaces
      */
@@ -102,11 +104,33 @@ final class ThemeTwigLoader implements LoaderInterface
             throw new LoaderError("Invalid namespaced template path '{$name}'.");
         }
 
-        $candidate = $basePath . DIRECTORY_SEPARATOR . implode(DIRECTORY_SEPARATOR, $segments);
+        $relativePath = implode(DIRECTORY_SEPARATOR, $segments);
+
+        $themedOverride = $this->resolveThemedNamespacedOverride($namespace, $relativePath);
+        if ($themedOverride !== null) {
+            return $themedOverride;
+        }
+
+        $candidate = $basePath . DIRECTORY_SEPARATOR . $relativePath;
         if (!is_file($candidate)) {
             throw new LoaderError("Namespaced template '{$name}' was not found.");
         }
 
         return $candidate;
+    }
+
+    private function resolveThemedNamespacedOverride(string $namespace, string $relativePath): ?string
+    {
+        try {
+            return $this->themeBuilder->template(
+                self::MODULE_OVERRIDE_DIRECTORY
+                . DIRECTORY_SEPARATOR
+                . $namespace
+                . DIRECTORY_SEPARATOR
+                . $relativePath
+            );
+        } catch (TemplateNotFoundException) {
+            return null;
+        }
     }
 }

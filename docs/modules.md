@@ -10,7 +10,8 @@ This is the feature you want when each module has its own `views/` folder and th
 - You configure module view folders as namespaces.
 - You render them with `@Namespace/template`.
 - This works in both normal rendering mode and theme mode.
-- This does **not** currently mean theme override for `@Namespace/...` templates. It simply renders the module's own template when you call it.
+- If theme mode is enabled, the active theme can transparently replace a module template first.
+- If no themed replacement exists, rendering falls back to the original module template.
 
 ## Recommended Folder Structure
 
@@ -113,6 +114,61 @@ If your controller echoes output directly, `display()` works the same way:
 $this->view->display('@Blog/post/show', ['post' => $post]);
 ```
 
+## Theme-Aware Module Templates
+
+If you are using `ThemeBuilder`, the loader checks for a themed module template before it falls back to the module's own file.
+
+Resolution order for:
+
+```php
+$view->render('@Blog/post/show', ['post' => $post]);
+```
+
+is:
+
+1. active theme override at `views/modules/Blog/post/show.twig`
+2. parent theme override at `views/modules/Blog/post/show.twig`
+3. original module template at `modules/Blog/views/post/show.twig`
+
+### Theme Folder Convention
+
+Inside a theme, put module overrides under `views/modules/<Namespace>/...`:
+
+```text
+themes/
+  default/
+    views/
+      layout.twig
+  dark/
+    views/
+      modules/
+        Blog/
+          post/
+            show.twig
+```
+
+### Themed Module Template Example
+
+```twig
+{# themes/dark/views/modules/Blog/post/show.twig #}
+{% extends "layout.twig" %}
+
+{% block content %}
+  <article>
+    <h1>{{ post.title }}</h1>
+    <p>This module view is being rendered through the active theme.</p>
+  </article>
+{% endblock %}
+```
+
+In this setup, the controller still renders:
+
+```php
+$view->render('@Blog/post/show', ['post' => $post]);
+```
+
+but the active theme supplies the final template when an override exists.
+
 ## Render Module Templates From Another Template
 
 Use the built-in `view()` helper:
@@ -173,16 +229,6 @@ Invalid:
 - `@blog/index`
 - `@blog-post/index`
 - `@Blog/post/show.twig`
-
-## Important Limitation
-
-If you are asking:
-
-"Can the active theme transparently replace `@Blog/post/show` with a theme-specific version?"
-
-The answer is: not currently.
-
-Right now, namespaced module views render the module's own template directly. That is already useful for modular apps, and it is the correct feature when you simply want each module to own and render its own templates.
 
 ## Related Documentation
 

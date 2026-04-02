@@ -10,6 +10,7 @@ Themes are optional and allow runtime switching without exposing Twig internals 
 - theme inheritance
 - theme metadata from manifests
 - theme asset URL resolution
+- themed module view overrides for namespaced templates
 
 ## Theme Directory Structure
 
@@ -25,6 +26,10 @@ themes/
     manifest.php
     views/
       layout.twig
+      modules/
+        Blog/
+          post/
+            show.twig
   tenantA/
     manifest.php
     views/
@@ -89,6 +94,32 @@ $themeBuilder->clearPreview();
 
 ```twig
 <link rel="stylesheet" href="{{ theme_asset('css/app.css') }}">
+```
+
+## Themed Module Overrides
+
+When your application renders a namespaced module template such as:
+
+```php
+$view->render('@Blog/post/show', ['post' => $post]);
+```
+
+theme mode checks for an override inside the active theme first:
+
+```text
+themes/<active-theme>/views/modules/Blog/post/show.twig
+```
+
+If the active theme does not provide that file, the loader falls back to the original module view namespace path.
+
+This lets a themed module template extend the active theme layout:
+
+```twig
+{% extends "layout.twig" %}
+
+{% block content %}
+  <h1>{{ post.title }}</h1>
+{% endblock %}
 ```
 
 ## Example Pages

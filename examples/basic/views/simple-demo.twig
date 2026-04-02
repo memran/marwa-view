@@ -169,6 +169,18 @@
           </section>
 
           <section class="rounded-3xl border border-white/10 bg-slate-950/60 p-6">
+            <h2 class="text-lg font-semibold text-white">Alpine Bridge Example</h2>
+            <div class="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4" {{ ui().data({ open: false }) }}>
+              <button class="inline-flex items-center rounded-full bg-brand-500 px-4 py-2 text-sm font-semibold text-white" {{ ui().click('open = !open') }}>
+                Toggle panel
+              </button>
+              <div class="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-100" {{ ui().show('open') }} {{ ui().cloak() }}>
+                Alpine directives were rendered by the optional <code class="font-mono text-emerald-50">ui()</code> bridge.
+              </div>
+            </div>
+          </section>
+
+          <section class="rounded-3xl border border-white/10 bg-slate-950/60 p-6">
             <h2 class="text-lg font-semibold text-white">Image Helper Example</h2>
             <img {{ image_attrs(
               asset('images/placeholder-dashboard.svg'),

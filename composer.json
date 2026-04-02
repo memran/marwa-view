@@ -18,7 +18,10 @@
   "autoload": {
     "psr-4": {
       "Marwa\\View\\": "src/"
-    }
+    },
+    "files": [
+      "src/Bridge/Alpine/functions.php"
+    ]
   },
   "autoload-dev": {
     "psr-4": {
